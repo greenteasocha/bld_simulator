@@ -21,6 +21,7 @@ struct App {
     status_message: String,
     show_help: bool,
     debug_mode: bool,
+    stickers_scroll: u16,
 }
 
 impl App {
@@ -35,6 +36,7 @@ impl App {
             status_message: "Ready. Press 'h' for help, 'd' for debug, 'q' to quit.".to_string(),
             show_help: false,
             debug_mode: false,
+            stickers_scroll: 0,
         }
     }
 
@@ -101,6 +103,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 KeyCode::Backspace => {
                     app.input_buffer.pop();
                 }
+                KeyCode::Up => {
+                    if app.debug_mode && app.stickers_scroll > 0 {
+                        app.stickers_scroll -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if app.debug_mode {
+                        app.stickers_scroll += 1;
+                    }
+                }
                 KeyCode::Char(c) => {
                     app.input_buffer.push(c);
                 }
@@ -156,10 +168,14 @@ fn ui(f: &mut Frame, app: &App) {
         let debug_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Percentage(50), // State構造体
-                Constraint::Percentage(50), // CubeDisplay構造体
+                Constraint::Percentage(33), // State構造体
+                Constraint::Percentage(33), // CubeStickers構造体
+                Constraint::Percentage(34), // CubeDisplay構造体
             ])
             .split(chunks[1]);
+
+        // デバッグ用に詳細な変換を実行
+        let (display, cube_stickers) = StateToDisplay::convert_with_stickers(&app.current_state);
 
         // State構造体のデバッグ出力
         let state_text = format!("State Debug:\n{}", app.current_state);
@@ -171,6 +187,40 @@ fn ui(f: &mut Frame, app: &App) {
             .wrap(ratatui::widgets::Wrap { trim: true });
         f.render_widget(state_paragraph, debug_chunks[0]);
 
+        // CubeStickers構造体のデバッグ出力（スクロール対応）
+        let stickers_text = cube_stickers.to_debug_string();
+        let stickers_lines: Vec<&str> = stickers_text.lines().collect();
+        
+        // 表示可能な行数を計算
+        let available_height = debug_chunks[1].height.saturating_sub(2) as usize; // ボーダーを除く
+        let total_lines = stickers_lines.len();
+        let scroll_offset = app.stickers_scroll as usize;
+        
+        // スクロール位置を調整
+        let max_scroll = total_lines.saturating_sub(available_height);
+        let actual_scroll = scroll_offset.min(max_scroll);
+        
+        // 表示する行を選択
+        let display_lines = if total_lines > available_height {
+            &stickers_lines[actual_scroll..actual_scroll + available_height]
+        } else {
+            &stickers_lines[..]
+        };
+        
+        let display_text = display_lines.join("\n");
+        let title = if total_lines > available_height {
+            format!("Cube Stickers ({}/{}) [↑↓ to scroll]", actual_scroll + 1, total_lines)
+        } else {
+            "Cube Stickers".to_string()
+        };
+        
+        let stickers_paragraph = Paragraph::new(display_text)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(title))
+            .style(Style::default().fg(Color::Yellow));
+        f.render_widget(stickers_paragraph, debug_chunks[1]);
+
         // CubeDisplay構造体のデバッグ出力
         let display_text = display.to_debug_string();
         let display_paragraph = Paragraph::new(display_text)
@@ -179,7 +229,7 @@ fn ui(f: &mut Frame, app: &App) {
                 .title("Display State"))
             .style(Style::default().fg(Color::Magenta))
             .wrap(ratatui::widgets::Wrap { trim: true });
-        f.render_widget(display_paragraph, debug_chunks[1]);
+        f.render_widget(display_paragraph, debug_chunks[2]);
 
     } else {
         // 通常モード
@@ -230,6 +280,10 @@ fn ui(f: &mut Frame, app: &App) {
             Line::from(vec![
                 Span::styled("d", Style::default().fg(Color::Yellow)),
                 Span::raw(" - Toggle debug mode"),
+            ]),
+            Line::from(vec![
+                Span::styled("↑/↓", Style::default().fg(Color::Yellow)),
+                Span::raw(" - Scroll debug info (in debug mode)"),
             ]),
             Line::from(vec![
                 Span::styled("r", Style::default().fg(Color::Yellow)),
