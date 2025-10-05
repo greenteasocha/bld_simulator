@@ -1,8 +1,8 @@
-use rubiks_cube_simulator::{State, RubiksCube, StateToDisplay, CubeNetWidget};
+use rubiks_cube_simulator::{State, RubiksCube, StateToDisplay, CubeNetWidget, SolutionSearcher};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+        event::{self, Event, KeyCode, KeyEventKind},
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
@@ -22,6 +22,15 @@ struct App {
     show_help: bool,
     debug_mode: bool,
     stickers_scroll: u16,
+    is_pressing_enter: bool,
+    selected_element: SelectedElement,
+    solution: Option<String>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum SelectedElement {
+    InputField,
+    SolveButton,
 }
 
 impl App {
@@ -33,10 +42,13 @@ impl App {
             cube,
             current_state,
             input_buffer: String::new(),
-            status_message: "Ready. Press 'h' for help, 'd' for debug, 'q' to quit.".to_string(),
+            status_message: "Ready. Press 'h' for help, 'd' for debug, 'q' to quit, Tab to switch between input/button.".to_string(),
             show_help: false,
             debug_mode: false,
             stickers_scroll: 0,
+            is_pressing_enter: false,
+            selected_element: SelectedElement::InputField,
+            solution: None,
         }
     }
 
@@ -60,13 +72,40 @@ impl App {
     fn toggle_debug(&mut self) {
         self.debug_mode = !self.debug_mode;
     }
+    
+    fn solve_cube(&mut self) {
+        let mut searcher = SolutionSearcher::with_bottom_layer_pattern(self.current_state.clone());
+        
+        match searcher.search() {
+            Some(solutions) => {
+                let moves = &solutions[0]; // Use the first solution found
+                let solution_str = SolutionSearcher::format_solution(moves);
+                self.solution = Some(solution_str.clone());
+                
+                // Apply the solution to actually solve the cube
+                let mut state = self.current_state.clone();
+                for move_action in moves {
+                    if let Some(new_state) = move_action.apply_to_state(&state, &self.cube) {
+                        state = new_state;
+                    }
+                }
+                self.current_state = state;
+                
+                self.status_message = format!("✅ Solution found: {}", solution_str);
+            }
+            None => {
+                self.solution = Some("No solution found within 3 moves".to_string());
+                self.status_message = "❌ No solution found within 3 moves for bottom layer pattern.".to_string();
+            }
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TUIモードを有効にする
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -77,8 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
+        LeaveAlternateScreen
     )?;
     terminal.show_cursor()?;
 
@@ -94,27 +132,61 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
         terminal.draw(|f| ui(f, app))?;
 
         if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Char('h') => app.toggle_help(),
-                KeyCode::Char('d') => app.toggle_debug(),
-                KeyCode::Char('r') => app.reset_cube(),
-                KeyCode::Enter => app.apply_scramble(),
-                KeyCode::Backspace => {
-                    app.input_buffer.pop();
-                }
-                KeyCode::Up => {
-                    if app.debug_mode && app.stickers_scroll > 0 {
-                        app.stickers_scroll -= 1;
+            match key.kind {
+                KeyEventKind::Press => {
+                    match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('h') => app.toggle_help(),
+                        KeyCode::Char('d') => app.toggle_debug(),
+                        KeyCode::Char('r') => app.reset_cube(),
+                        KeyCode::Tab => {
+                            app.selected_element = match app.selected_element {
+                                SelectedElement::InputField => SelectedElement::SolveButton,
+                                SelectedElement::SolveButton => SelectedElement::InputField,
+                            };
+                        }
+                        KeyCode::Enter => {
+                            app.is_pressing_enter = true;
+                            match app.selected_element {
+                                SelectedElement::InputField => app.apply_scramble(),
+                                SelectedElement::SolveButton => {
+                                    // Show "Solving..." while key is pressed
+                                }
+                            }
+                        }
+                        KeyCode::Backspace => {
+                            if app.selected_element == SelectedElement::InputField {
+                                app.input_buffer.pop();
+                            }
+                        }
+                        KeyCode::Up => {
+                            if app.debug_mode && app.stickers_scroll > 0 {
+                                app.stickers_scroll -= 1;
+                            }
+                        }
+                        KeyCode::Down => {
+                            if app.debug_mode {
+                                app.stickers_scroll += 1;
+                            }
+                        }
+                        KeyCode::Char(c) => {
+                            if app.selected_element == SelectedElement::InputField {
+                                app.input_buffer.push(c);
+                            }
+                        }
+                        _ => {}
                     }
                 }
-                KeyCode::Down => {
-                    if app.debug_mode {
-                        app.stickers_scroll += 1;
+                KeyEventKind::Release => {
+                    match key.code {
+                        KeyCode::Enter => {
+                            app.is_pressing_enter = false;
+                            if app.selected_element == SelectedElement::SolveButton {
+                                app.solve_cube();
+                            }
+                        }
+                        _ => {}
                     }
-                }
-                KeyCode::Char(c) => {
-                    app.input_buffer.push(c);
                 }
                 _ => {}
             }
@@ -136,8 +208,9 @@ fn ui(f: &mut Frame, app: &App) {
         let left_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(15),        // キューブ表示
+                Constraint::Min(12),        // キューブ表示
                 Constraint::Length(3),      // 入力エリア
+                Constraint::Length(3),      // Solution表示エリア
                 Constraint::Length(2),      // ステータスエリア
             ])
             .split(chunks[0]);
@@ -149,20 +222,61 @@ fn ui(f: &mut Frame, app: &App) {
                 if app.current_state.is_solved() { "SOLVED!" } else { "Scrambled" }));
         f.render_widget(cube_widget, left_chunks[0]);
 
-        // 入力エリア
+        // 入力エリアとボタンエリア
+        let input_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(70), // 入力フィールド
+                Constraint::Percentage(30), // Solveボタン
+            ])
+            .split(left_chunks[1]);
+
+        // 入力フィールド
+        let input_style = if app.selected_element == SelectedElement::InputField {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
         let input_paragraph = Paragraph::new(app.input_buffer.as_str())
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title("Scramble"))
-            .style(Style::default().fg(Color::Yellow));
-        f.render_widget(input_paragraph, left_chunks[1]);
+            .style(input_style);
+        f.render_widget(input_paragraph, input_chunks[0]);
+
+        // Solveボタン
+        let is_solving = app.is_pressing_enter && app.selected_element == SelectedElement::SolveButton;
+        let button_text = if is_solving { "Solving..." } else { "Solve" };
+        let (button_style, button_title) = if is_solving {
+            (Style::default().fg(Color::Yellow).bg(Color::Red), "🔄 SOLVING 🔄".to_string())
+        } else if app.selected_element == SelectedElement::SolveButton {
+            (Style::default().fg(Color::Black).bg(Color::Green), ">>> Solve <<<".to_string())
+        } else {
+            (Style::default().fg(Color::White), "Solve".to_string())
+        };
+        let button_paragraph = Paragraph::new(button_text)
+            .block(Block::default().borders(Borders::ALL).title(button_title))
+            .style(button_style)
+            .alignment(Alignment::Center);
+        f.render_widget(button_paragraph, input_chunks[1]);
+
+        // Solution表示エリア
+        let solution_text = app.solution.as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("Press Solve to find a solution");
+        let solution_paragraph = Paragraph::new(solution_text)
+            .block(Block::default().borders(Borders::ALL).title("Solution"))
+            .style(Style::default().fg(Color::Cyan))
+            .alignment(Alignment::Left)
+            .wrap(ratatui::widgets::Wrap { trim: true });
+        f.render_widget(solution_paragraph, left_chunks[2]);
 
         // ステータスエリア
         let status_paragraph = Paragraph::new(app.status_message.as_str())
             .block(Block::default().borders(Borders::ALL).title("Status"))
             .style(Style::default().fg(Color::Green))
             .alignment(Alignment::Left);
-        f.render_widget(status_paragraph, left_chunks[2]);
+        f.render_widget(status_paragraph, left_chunks[3]);
 
         // デバッグ情報エリア
         let debug_chunks = Layout::default()
@@ -236,8 +350,9 @@ fn ui(f: &mut Frame, app: &App) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(15),  // キューブ表示エリア
+                Constraint::Min(12),   // キューブ表示エリア
                 Constraint::Length(3), // 入力エリア
+                Constraint::Length(3), // Solution表示エリア
                 Constraint::Length(2), // ステータスエリア
             ])
             .split(f.area());
@@ -249,20 +364,61 @@ fn ui(f: &mut Frame, app: &App) {
                 if app.current_state.is_solved() { "SOLVED!" } else { "Scrambled" }));
         f.render_widget(cube_widget, chunks[0]);
 
-        // 入力エリア
+        // 入力エリアとボタンエリア
+        let input_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(70), // 入力フィールド
+                Constraint::Percentage(30), // Solveボタン
+            ])
+            .split(chunks[1]);
+
+        // 入力フィールド
+        let input_style = if app.selected_element == SelectedElement::InputField {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
         let input_paragraph = Paragraph::new(app.input_buffer.as_str())
             .block(Block::default()
                 .borders(Borders::ALL)
                 .title("Enter scramble (e.g., R U R' F R F')"))
-            .style(Style::default().fg(Color::Yellow));
-        f.render_widget(input_paragraph, chunks[1]);
+            .style(input_style);
+        f.render_widget(input_paragraph, input_chunks[0]);
+
+        // Solveボタン
+        let is_solving = app.is_pressing_enter && app.selected_element == SelectedElement::SolveButton;
+        let button_text = if is_solving { "Solving..." } else { "Solve" };
+        let (button_style, button_title) = if is_solving {
+            (Style::default().fg(Color::Yellow).bg(Color::Red), "🔄 SOLVING 🔄".to_string())
+        } else if app.selected_element == SelectedElement::SolveButton {
+            (Style::default().fg(Color::Black).bg(Color::Green), ">>> Solve <<<".to_string())
+        } else {
+            (Style::default().fg(Color::White), "Solve".to_string())
+        };
+        let button_paragraph = Paragraph::new(button_text)
+            .block(Block::default().borders(Borders::ALL).title(button_title))
+            .style(button_style)
+            .alignment(Alignment::Center);
+        f.render_widget(button_paragraph, input_chunks[1]);
+
+        // Solution表示エリア
+        let solution_text = app.solution.as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("Press Solve to find a solution");
+        let solution_paragraph = Paragraph::new(solution_text)
+            .block(Block::default().borders(Borders::ALL).title("Solution"))
+            .style(Style::default().fg(Color::Cyan))
+            .alignment(Alignment::Left)
+            .wrap(ratatui::widgets::Wrap { trim: true });
+        f.render_widget(solution_paragraph, chunks[2]);
 
         // ステータスエリア
         let status_paragraph = Paragraph::new(app.status_message.as_str())
             .block(Block::default().borders(Borders::ALL).title("Status"))
             .style(Style::default().fg(Color::Green))
             .alignment(Alignment::Left);
-        f.render_widget(status_paragraph, chunks[2]);
+        f.render_widget(status_paragraph, chunks[3]);
     }
 
     // ヘルプオーバーレイ
@@ -290,8 +446,12 @@ fn ui(f: &mut Frame, app: &App) {
                 Span::raw(" - Reset cube to solved state"),
             ]),
             Line::from(vec![
+                Span::styled("Tab", Style::default().fg(Color::Yellow)),
+                Span::raw(" - Switch between input field and Solve button"),
+            ]),
+            Line::from(vec![
                 Span::styled("Enter", Style::default().fg(Color::Yellow)),
-                Span::raw(" - Apply scramble"),
+                Span::raw(" - Apply scramble or solve cube"),
             ]),
             Line::from(vec![
                 Span::styled("q", Style::default().fg(Color::Yellow)),

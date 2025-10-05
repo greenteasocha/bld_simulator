@@ -69,6 +69,7 @@ pub struct SolutionSearcher {
     desired_pattern: PartialStatePattern,
     max_depth: usize,
     cube: RubiksCube,
+    solutions_found: Vec<Vec<Move>>,
 }
 
 /// Represents a search node containing state, move sequence, and depth
@@ -87,6 +88,7 @@ impl SolutionSearcher {
             desired_pattern,
             max_depth,
             cube: RubiksCube::new(),
+            solutions_found: Vec::new(),
         }
     }
 
@@ -100,7 +102,7 @@ impl SolutionSearcher {
     }
 
     /// Search for a solution using breadth-first search
-    pub fn search(&self) -> Option<Vec<Move>> {
+    pub fn search(&mut self) -> Option<Vec<Vec<Move>>> {
         let mut queue = VecDeque::new();
         let mut visited = std::collections::HashSet::new();
 
@@ -143,7 +145,8 @@ impl SolutionSearcher {
 
                     // Check if this state matches our desired pattern
                     if new_state.matches_partial_pattern(&self.desired_pattern) {
-                        return Some(new_moves);
+                        self.solutions_found.push(new_moves);
+                        continue;
                     }
 
                     // Add to queue for further exploration
@@ -157,6 +160,10 @@ impl SolutionSearcher {
             }
         }
 
+        // Return all of solution found, if any
+        if !self.solutions_found.is_empty() {
+            return Some(self.solutions_found.clone());
+        }
         None // No solution found within max depth
     }
 
@@ -219,13 +226,27 @@ mod tests {
         state = cube.apply_move(&state, "R").unwrap();
         state = cube.apply_move(&state, "F").unwrap();
 
-        let searcher = SolutionSearcher::with_bottom_layer_pattern(state);
+        let mut searcher = SolutionSearcher::with_bottom_layer_pattern(state);
         let solution = searcher.search();
 
         // U は bottom layer に影響しないので、F' R' で解けるはず
-        assert_eq!(
-            SolutionSearcher::format_solution(&solution.unwrap()),
-            "F' R'"
-        );
+        assert!(solution.is_some());
+        let solutions = solution.unwrap();
+        assert_eq!(SolutionSearcher::format_solution(&solutions[0]), "F' R'");
+
+        // debug 用に all solution を表示
+        println!("Input: U R F");
+        println!("All cross solutions found:");
+
+        for (i, sol) in solutions.iter().enumerate() {
+            println!(
+                "Solution {}: {}",
+                i + 1,
+                SolutionSearcher::format_solution(sol)
+            );
+        }
+
+        // solution の数は7つであること
+        assert_eq!(solutions.len(), 7);
     }
 }
