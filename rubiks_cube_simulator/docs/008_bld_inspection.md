@@ -60,21 +60,22 @@ cp のみを考慮した手続きと変わらないのは以下です。
 - 操作列の出力には、swap と twist を push 可能
 
 ## co 二点交換時の cp の変化
-cp[0] と cp[i]　が交換されるとき、同時に以下の操作を行います。対称性がないことに注意してください。
-co[0], co[i] = mod3(co[0] + co[i]), 0
-
-これに伴い、出力する操作列を以下のように変更してください。
+co を管理するに伴い、出力する操作列を以下のように変更してください。
 {
     index1
     index2
     orientation // 交換操作を行う前の co[0] を記録する   
 }
 
+cp[0] と cp[i]　が交換されるとき、同時に以下の操作を行います。対称性がないことに注意してください。
+co[0], co[i] = mod3(orientation + co[i]), mod3(co[0] - orientation)
+
+
 ## co 専用の終了条件
 **cpの終了条件が満たされる場合にのみ**、追加で全ての co について以下の判断ロジックを追加します。
 
 co[i] = 0 の場合何もしない。
-そうでない場合、CornerTwistOperation{co: co[i]} を操作列に push して co[i] = 0 にする
+そうでない場合、CornerTwistOperation{co: co[i]} を操作列に push して co[i] = 0 にする (正確には、mod3(co[i] - 操作列にpushした値))
 
 
 
