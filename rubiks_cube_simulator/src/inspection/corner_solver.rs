@@ -28,9 +28,10 @@ impl CornerSwapOperation {
         new_cp.swap(self.target1, self.target2);
 
         // co の変化: co[target1], co[target2] = (co[target1] + co[target2]) % 3, 0
-        let new_co_target1 = (new_co[self.target1] + new_co[self.target2]) % 3;
-        new_co[self.target2] = 0;
+        let new_co_target1 = (self.orientation + new_co[self.target2]) % 3;
+        let new_co_target2 = (new_co[self.target1] - self.orientation) % 3;
         new_co[self.target1] = new_co_target1;
+        new_co[self.target2] = new_co_target2;
 
         State::new(new_cp, new_co, state.ep, state.eo)
     }
@@ -66,7 +67,7 @@ impl CornerTwistOperation {
     /// この操作を State に適用する
     pub fn apply(&self, state: &State) -> State {
         let mut new_co = state.co;
-        new_co[self.target] = 0;
+        new_co[self.target] = (new_co[self.target] - self.orientation) % 3;
 
         State::new(state.cp, new_co, state.ep, state.eo)
     }
@@ -131,8 +132,8 @@ impl CornerInspection {
                 let target = current_state.cp[0] as usize;
                 let ori = current_state.co[0]; // 交換前のco[0]を記録
 
-                let mut operation = CornerOperation::Swap(CornerSwapOperation::new(0, target, ori));
-                operations.push(operation);
+                let operation = CornerOperation::Swap(CornerSwapOperation::new(0, target, ori));
+                operations.push(operation.clone());
 
                 current_state = operation.apply(&current_state);
             }
@@ -141,9 +142,8 @@ impl CornerInspection {
             if let Some(next_index) = Self::find_next_misplaced_cp(&current_state.cp) {
                 let ori = current_state.co[0]; // 交換前のco[0]を記録
 
-                let mut operation =
-                    CornerOperation::Swap(CornerSwapOperation::new(0, next_index, ori));
-                operations.push(operation);
+                let operation = CornerOperation::Swap(CornerSwapOperation::new(0, next_index, ori));
+                operations.push(operation.clone());
 
                 current_state = operation.apply(&current_state);
             } else {
@@ -155,10 +155,10 @@ impl CornerInspection {
         // co 専用の終了処理
         for i in 0..8 {
             if current_state.co[i] != 0 {
-                let mut operation =
+                let operation =
                     CornerOperation::Twist(CornerTwistOperation::new(i, current_state.co[i]));
 
-                operations.push(operation);
+                operations.push(operation.clone());
                 current_state = operation.apply(&current_state);
             }
         }
