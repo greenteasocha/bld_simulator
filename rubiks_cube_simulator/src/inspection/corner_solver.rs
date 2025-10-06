@@ -27,9 +27,9 @@ impl CornerSwapOperation {
         // cp の交換
         new_cp.swap(self.target1, self.target2);
 
-        // co の変化: co[target1], co[target2] = (co[target1] + co[target2]) % 3, 0
+        // co の変化: co[target1], co[target2] = (co[target2] + orientation) % 3, (co[target1] - orientation + 3) % 3
         let new_co_target1 = (self.orientation + new_co[self.target2]) % 3;
-        let new_co_target2 = (new_co[self.target1] - self.orientation) % 3;
+        let new_co_target2 = (new_co[self.target1] + 3 - self.orientation) % 3;
         new_co[self.target1] = new_co_target1;
         new_co[self.target2] = new_co_target2;
 
@@ -67,7 +67,7 @@ impl CornerTwistOperation {
     /// この操作を State に適用する
     pub fn apply(&self, state: &State) -> State {
         let mut new_co = state.co;
-        new_co[self.target] = (new_co[self.target] - self.orientation) % 3;
+        new_co[self.target] = (new_co[self.target] + 3 - self.orientation) % 3;
 
         State::new(state.cp, new_co, state.ep, state.eo)
     }
