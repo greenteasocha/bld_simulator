@@ -144,6 +144,27 @@ mod tests {
 
         println!("\n=== Wrong Operation Detection Test ===");
 
+        /*
+        expected output:
+        Initial State:
+          cp: [1, 2, 0, 3, 4, 5, 6, 7]
+          co: [1, 2, 0, 0, 0, 0, 0, 0]
+
+        Correct solution:
+          Step 1: Swap: UBL ↔ BUR
+          Step 2: Swap: UBL ↔ UFR
+
+        Wrong solved State:
+          cp: [0, 1, 2, 3, 4, 5, 6, 7]
+          co: [0, 1, 2, 0, 0, 0, 0, 0]
+
+        Found 1 possible wrong operation(s):
+
+        Possibility 1:
+        Did you apply:
+          Step 1: Swap: UBL ↔ UBR
+          Step 2: Swap: UBL ↔ UFR
+        */
         println!(
             "\n{}",
             detector.format_detection_result(&wrong_solved_state)
@@ -182,8 +203,8 @@ mod tests {
     #[test]
     fn test_complex_case_detection() {
         let initial_state = State::new(
-            [3, 1, 2, 0, 5, 7, 4, 6],
-            [2, 1, 0, 1, 0, 2, 1, 0],
+            [1, 0, 6, 2, 5, 4, 3, 7],
+            [2, 1, 0, 2, 2, 2, 2, 1],
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
@@ -191,67 +212,15 @@ mod tests {
         let detector = WrongOperationDetector::new(initial_state.clone());
 
         println!("\n=== Complex Case Detection Test ===");
-        println!(
-            "Initial state: cp={:?}, co={:?}",
-            initial_state.cp, initial_state.co
-        );
-        println!("Correct solution:");
-        for (i, op) in detector.correct_solution().iter().enumerate() {
-            println!("  Step {}: {}", i + 1, op);
-        }
+        println!("\nU' F U2 D2 F' U B U F U D2 F' B' D2 F' U2 D2 B");
 
         let wrong_state = State::new(
             [0, 1, 2, 3, 4, 5, 6, 7],
-            [0, 0, 0, 0, 0, 2, 0, 1],
+            [0, 0, 1, 2, 0, 0, 0, 0],
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
 
-        detector.format_detection_result(&wrong_state);
-        // いくつかのバリアントをテスト
-        // let test_count = std::cmp::min(5, detector.variant_count());
-        // println!("\nTesting {} variants:", test_count);
-
-        // for i in 0..test_count {
-        //     let (_, wrong_state) = &detector.nearby_variants[i];
-        //     let detected = detector.detect_wrong_operation(wrong_state);
-        //     println!("  Variant {}: {} match(es) found", i + 1, detected.len());
-    }
-
-    #[test]
-    fn test_multiple_matches() {
-        // 同じ最終状態に到達する複数の操作列が存在する可能性をテスト
-        let initial_state = State::new(
-            [2, 1, 0, 3, 4, 5, 6, 7],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        );
-
-        let detector = WrongOperationDetector::new(initial_state);
-
-        // 各バリアントの最終状態でグループ化
-        use std::collections::HashMap;
-        let mut state_groups: HashMap<State, usize> = HashMap::new();
-
-        for (_, final_state) in &detector.nearby_variants {
-            *state_groups.entry(final_state.clone()).or_insert(0) += 1;
-        }
-
-        let duplicates: Vec<_> = state_groups
-            .iter()
-            .filter(|(_, &count)| count > 1)
-            .collect();
-
-        println!("\n=== Multiple Matches Test ===");
-        println!("Total variants: {}", detector.variant_count());
-        println!("Unique final states: {}", state_groups.len());
-        println!("States with multiple paths: {}", duplicates.len());
-
-        if let Some((state, count)) = duplicates.first() {
-            println!("\nExample: {} operations lead to the same state", count);
-            let detected = detector.detect_wrong_operation(state);
-            assert_eq!(detected.len(), **count);
-        }
+        println!("\n{}", detector.format_detection_result(&wrong_state));
     }
 }

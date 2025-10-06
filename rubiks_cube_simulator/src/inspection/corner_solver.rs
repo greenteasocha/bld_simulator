@@ -39,11 +39,22 @@ impl CornerSwapOperation {
 
 impl std::fmt::Display for CornerSwapOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Swap: {} ↔ {} (ori: {})",
-            self.target1, self.target2, self.orientation
-        )
+        // target_sticker[corner_index][orientation]
+        const TARGET_STICKERS: [[&str; 3]; 8] = [
+            ["UBL", "BUL", "LUB"], // 0
+            ["UBR", "RUB", "BUR"], // 1
+            ["UFR", "FUR", "RUF"], // 2
+            ["UFL", "LUF", "FUL"], // 3
+            ["DBL", "LDB", "BDL"], // 4
+            ["DBR", "BDR", "RDB"], // 5
+            ["DFR", "RDF", "FDR"], // 6
+            ["DFL", "FDL", "LDF"], // 7
+        ];
+
+        let target1_sticker = TARGET_STICKERS[self.target1][0]; // target1は常に0なのでorientation=0
+        let target2_sticker = TARGET_STICKERS[self.target2][self.orientation as usize];
+
+        write!(f, "Swap: {} ↔ {}", target1_sticker, target2_sticker)
     }
 }
 
@@ -75,11 +86,18 @@ impl CornerTwistOperation {
 
 impl std::fmt::Display for CornerTwistOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Twist: corner[{}] (ori: {})",
-            self.target, self.orientation
-        )
+        const TARGET_STICKERS: [&str; 8] = ["UBL", "UBR", "UFR", "UFL", "DBL", "DBR", "DFR", "DFL"];
+
+        const ROTATION_DIRECTIONS: [&str; 3] = [
+            "noop",              // 0: 回転なし
+            "counter-clockwise", // 1: 反時計回り
+            "clockwise",         // 2: 時計回り
+        ];
+
+        let target_sticker = TARGET_STICKERS[self.target];
+        let rotation_direction = ROTATION_DIRECTIONS[self.orientation as usize];
+
+        write!(f, "Twist: {} ({})", target_sticker, rotation_direction)
     }
 }
 
