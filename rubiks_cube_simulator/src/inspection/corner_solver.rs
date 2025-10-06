@@ -4,19 +4,35 @@ use crate::cube::State;
 #[derive(Debug, Clone, PartialEq)]
 pub struct CornerSwapOperation {
     /// 交換する2つのインデックス
-    pub index1: usize,
-    pub index2: usize,
-    /// 交換操作を行う前の co[index1] を記録
+    pub target1: usize,
+    pub target2: usize,
+    /// 交換操作を行う前の co[target1] を記録
     pub orientation: u8,
 }
 
 impl CornerSwapOperation {
-    pub fn new(index1: usize, index2: usize, orientation: u8) -> Self {
+    pub fn new(target1: usize, target2: usize, orientation: u8) -> Self {
         Self {
-            index1,
-            index2,
+            target1,
+            target2,
             orientation,
         }
+    }
+
+    /// この操作を State に適用する
+    pub fn apply(&self, state: &State) -> State {
+        let mut new_cp = state.cp;
+        let mut new_co = state.co;
+
+        // cp の交換
+        new_cp.swap(self.target1, self.target2);
+
+        // co の変化: co[target1], co[target2] = (co[target1] + co[target2]) % 3, 0
+        let new_co_target1 = (new_co[self.target1] + new_co[self.target2]) % 3;
+        new_co[self.target2] = 0;
+        new_co[self.target1] = new_co_target1;
+
+        State::new(new_cp, new_co, state.ep, state.eo)
     }
 }
 
@@ -24,8 +40,8 @@ impl std::fmt::Display for CornerSwapOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} ↔ {} (ori: {})",
-            self.index1, self.index2, self.orientation
+            "Swap: {} ↔ {} (ori: {})",
+            self.target1, self.target2, self.orientation
         )
     }
 }
@@ -34,14 +50,35 @@ impl std::fmt::Display for CornerSwapOperation {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CornerTwistOperation {
     /// 対象のインデックス
-    pub index: usize,
+    pub target: usize,
     /// 向きの値 (1 or 2)
-    pub co: u8,
+    pub orientation: u8,
+}
+
+impl CornerTwistOperation {
+    pub fn new(target: usize, orientation: u8) -> Self {
+        Self {
+            target,
+            orientation,
+        }
+    }
+
+    /// この操作を State に適用する
+    pub fn apply(&self, state: &State) -> State {
+        let mut new_co = state.co;
+        new_co[self.target] = 0;
+
+        State::new(state.cp, new_co, state.ep, state.eo)
+    }
 }
 
 impl std::fmt::Display for CornerTwistOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Twist corner[{}] (co: {})", self.index, self.co)
+        write!(
+            f,
+            "Twist: corner[{}] (ori: {})",
+            self.target, self.orientation
+        )
     }
 }
 
@@ -52,10 +89,20 @@ pub enum CornerOperation {
     Twist(CornerTwistOperation),
 }
 
+impl CornerOperation {
+    /// この操作を State に適用する
+    pub fn apply(&self, state: &State) -> State {
+        match self {
+            CornerOperation::Swap(op) => op.apply(state),
+            CornerOperation::Twist(op) => op.apply(state),
+        }
+    }
+}
+
 impl std::fmt::Display for CornerOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CornerOperation::Swap(op) => write!(f, "Swap: {}", op),
+            CornerOperation::Swap(op) => write!(f, "{}", op),
             CornerOperation::Twist(op) => write!(f, "{}", op),
         }
     }
@@ -68,49 +115,37 @@ impl CornerInspection {
     /// cp と co を完成状態に戻すための操作列を計算
     ///
     /// # Arguments
-    /// * `state` - 現在のキューブ状態
+    /// * `state` - 現在のキューブ状態（この関数内で変更されない）
     ///
     /// # Returns
     /// コーナー操作の列（Swap と Twist）
     pub fn solve_corner_permutation_with_orientation(state: &State) -> Vec<CornerOperation> {
-        let mut cp = state.cp.clone();
-        let mut co = state.co.clone();
+        // let mut cp = state.cp.clone();
+        // let mut co = state.co.clone();
+        let mut current_state = state.clone();
         let mut operations = Vec::new();
 
         loop {
             // cp[0]との二点交換ループ
-            while cp[0] != 0 {
-                let target = cp[0] as usize;
-                let ori = co[0]; // 交換前のco[0]を記録
+            while current_state.cp[0] != 0 {
+                let target = current_state.cp[0] as usize;
+                let ori = current_state.co[0]; // 交換前のco[0]を記録
 
-                operations.push(CornerOperation::Swap(CornerSwapOperation::new(
-                    0, target, ori,
-                )));
+                let mut operation = CornerOperation::Swap(CornerSwapOperation::new(0, target, ori));
+                operations.push(operation);
 
-                // cp の交換
-                cp.swap(0, target);
-
-                // co の変化: co[0], co[target] = (co[0] + co[target]) % 3, 0
-                let new_co0 = (co[0] + co[target]) % 3;
-                co[target] = 0;
-                co[0] = new_co0;
+                current_state = operation.apply(&current_state);
             }
 
             // 別ループ探索
-            if let Some(next_index) = Self::find_next_misplaced_cp(&cp) {
-                let ori = co[0]; // 交換前のco[0]を記録
+            if let Some(next_index) = Self::find_next_misplaced_cp(&current_state.cp) {
+                let ori = current_state.co[0]; // 交換前のco[0]を記録
 
-                operations.push(CornerOperation::Swap(CornerSwapOperation::new(
-                    0, next_index, ori,
-                )));
+                let mut operation =
+                    CornerOperation::Swap(CornerSwapOperation::new(0, next_index, ori));
+                operations.push(operation);
 
-                // cp の交換
-                cp.swap(0, next_index);
-
-                // co の変化
-                let new_co0 = (co[0] + co[next_index]) % 3;
-                co[next_index] = 0;
-                co[0] = new_co0;
+                current_state = operation.apply(&current_state);
             } else {
                 // cp の終了条件が満たされた
                 break;
@@ -119,12 +154,12 @@ impl CornerInspection {
 
         // co 専用の終了処理
         for i in 0..8 {
-            if co[i] != 0 {
-                operations.push(CornerOperation::Twist(CornerTwistOperation {
-                    index: i,
-                    co: co[i],
-                }));
-                co[i] = 0;
+            if current_state.co[i] != 0 {
+                let mut operation =
+                    CornerOperation::Twist(CornerTwistOperation::new(i, current_state.co[i]));
+
+                operations.push(operation);
+                current_state = operation.apply(&current_state);
             }
         }
 
@@ -139,39 +174,6 @@ impl CornerInspection {
             }
         }
         None
-    }
-
-    /// 操作列を適用した結果の cp, co を計算（検証用）
-    pub fn apply_operations(
-        initial_cp: [u8; 8],
-        initial_co: [u8; 8],
-        operations: &[CornerOperation],
-    ) -> ([u8; 8], [u8; 8]) {
-        let mut cp = initial_cp;
-        let mut co = initial_co;
-
-        for op in operations {
-            match op {
-                CornerOperation::Swap(swap_op) => {
-                    let i1 = swap_op.index1;
-                    let i2 = swap_op.index2;
-
-                    // cp の交換
-                    cp.swap(i1, i2);
-
-                    // co の変化
-                    let new_co_i1 = (co[i1] + co[i2]) % 3;
-                    co[i2] = 0;
-                    co[i1] = new_co_i1;
-                }
-                CornerOperation::Twist(twist_op) => {
-                    // Twist操作はco[index]を0にする
-                    co[twist_op.index] = 0;
-                }
-            }
-        }
-
-        (cp, co)
     }
 
     /// 操作列を人間が読みやすい形式で出力
@@ -201,11 +203,15 @@ mod tests {
 
         let operations = CornerInspection::solve_corner_permutation_with_orientation(&state);
 
-        // 結果が完成状態になることを確認
-        let (result_cp, result_co) =
-            CornerInspection::apply_operations(state.cp, state.co, &operations);
-        assert_eq!(result_cp, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(result_co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        // 初期 state に対して operation を順次 apply して検証
+        let mut current_state = state.clone();
+        for op in &operations {
+            current_state = op.apply(&current_state);
+        }
+
+        assert_eq!(current_state.cp, [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(current_state.co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(current_state.is_solved());
     }
 
     #[test]
@@ -220,11 +226,15 @@ mod tests {
 
         let operations = CornerInspection::solve_corner_permutation_with_orientation(&state);
 
-        // 結果が完成状態になることを確認
-        let (result_cp, result_co) =
-            CornerInspection::apply_operations(state.cp, state.co, &operations);
-        assert_eq!(result_cp, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(result_co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        // 初期 state に対して operation を順次 apply して検証
+        let mut current_state = state.clone();
+        for op in &operations {
+            current_state = op.apply(&current_state);
+        }
+
+        assert_eq!(current_state.cp, [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(current_state.co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(current_state.is_solved());
     }
 
     #[test]
@@ -244,11 +254,15 @@ mod tests {
             .iter()
             .all(|op| matches!(op, CornerOperation::Twist(_))));
 
-        // 結果が完成状態になることを確認
-        let (result_cp, result_co) =
-            CornerInspection::apply_operations(state.cp, state.co, &operations);
-        assert_eq!(result_cp, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(result_co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        // 初期 state に対して operation を順次 apply して検証
+        let mut current_state = state.clone();
+        for op in &operations {
+            current_state = op.apply(&current_state);
+        }
+
+        assert_eq!(current_state.cp, [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(current_state.co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(current_state.is_solved());
     }
 
     #[test]
@@ -269,8 +283,6 @@ mod tests {
         );
 
         println!("\n=== test_complex_case ===");
-        println!("U' F U2 D2 F' U B U F U D2 F' B' D2 F' U2 D2 B");
-
         println!("Initial state:");
         println!("  cp: {:?}", state.cp);
         println!("  co: {:?}", state.co);
@@ -280,16 +292,20 @@ mod tests {
         println!("\nOperations:");
         println!("{}", CornerInspection::format_operations(&operations));
 
-        let (result_cp, result_co) =
-            CornerInspection::apply_operations(state.cp, state.co, &operations);
+        // 初期 state に対して operation を順次 apply して検証
+        let mut current_state = state.clone();
+        for op in &operations {
+            current_state = op.apply(&current_state);
+        }
 
         println!("\nFinal state:");
-        println!("  cp: {:?}", result_cp);
-        println!("  co: {:?}", result_co);
+        println!("  cp: {:?}", current_state.cp);
+        println!("  co: {:?}", current_state.co);
         println!("=========================\n");
 
-        assert_eq!(result_cp, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(result_co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(current_state.cp, [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(current_state.co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(current_state.is_solved());
     }
 
     #[test]
@@ -310,48 +326,31 @@ mod tests {
 
         let operations = CornerInspection::solve_corner_permutation_with_orientation(&state);
 
-        let mut cp = state.cp;
-        let mut co = state.co;
+        let mut current_state = state.clone();
 
         for (i, op) in operations.iter().enumerate() {
             println!("Step {}: {}", i + 1, op);
+            println!(
+                "  Before: cp: {:?}, co: {:?}",
+                current_state.cp, current_state.co
+            );
 
-            match op {
-                CornerOperation::Swap(swap_op) => {
-                    let i1 = swap_op.index1;
-                    let i2 = swap_op.index2;
+            current_state = op.apply(&current_state);
 
-                    println!("  Before: cp: {:?}, co: {:?}", cp, co);
-
-                    // cp の交換
-                    cp.swap(i1, i2);
-
-                    // co の変化
-                    let new_co_i1 = (co[i1] + co[i2]) % 3;
-                    co[i2] = 0;
-                    co[i1] = new_co_i1;
-
-                    println!("  After:  cp: {:?}, co: {:?}", cp, co);
-                }
-                CornerOperation::Twist(twist_op) => {
-                    println!("  Before: co: {:?}", co);
-
-                    // Twist操作
-                    co[twist_op.index] = 0;
-                    println!("  Twisted co[{}] from {} to 0", twist_op.index, twist_op.co);
-
-                    println!("  After:  co: {:?}", co);
-                }
-            }
+            println!(
+                "  After:  cp: {:?}, co: {:?}",
+                current_state.cp, current_state.co
+            );
             println!();
         }
 
         println!("Final state:");
-        println!("  cp: {:?}", cp);
-        println!("  co: {:?}", co);
+        println!("  cp: {:?}", current_state.cp);
+        println!("  co: {:?}", current_state.co);
         println!("=== End of debug output ===\n");
 
-        assert_eq!(cp, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(current_state.cp, [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert_eq!(current_state.co, [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(current_state.is_solved());
     }
 }
