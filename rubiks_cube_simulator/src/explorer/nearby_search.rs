@@ -1,5 +1,5 @@
 use crate::cube::State;
-use crate::inspection::{CornerOperation, CornerSwapOperation, CornerTwistOperation};
+use crate::inspection::{CornerOperation, CornerSwapOperation};
 
 /// 操作列の近傍を探索する構造体
 ///
@@ -93,7 +93,7 @@ impl NearbyOperationSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspection::CornerInspection;
+    use crate::inspection::{CornerInspection, CornerTwistOperation};
 
     #[test]
     fn test_nearby_search_basic() {

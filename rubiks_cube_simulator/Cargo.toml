@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 ratatui = { version = "0.28", features = ["crossterm"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+csv = "1.1"
