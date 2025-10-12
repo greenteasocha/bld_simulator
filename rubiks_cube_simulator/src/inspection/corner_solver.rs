@@ -1,5 +1,8 @@
 use crate::cube::State;
 
+const BUFFER_PIECE: usize = 0;
+const NEW_LOOP_PRIORITY: [usize; 7] = [1, 2, 3, 4, 5, 6, 7];
+
 /// コーナーの2点交換操作を表す（co考慮版）
 #[derive(Debug, Clone, PartialEq)]
 pub struct CornerSwapOperation {
@@ -145,10 +148,10 @@ impl CornerInspection {
         let mut operations = Vec::new();
 
         loop {
-            // cp[0]との二点交換ループ
-            while current_state.cp[0] != 0 {
-                let target = current_state.cp[0] as usize;
-                let ori = current_state.co[0]; // 交換前のco[0]を記録
+            // cp[BUFFER_PIECE]との二点交換ループ
+            while current_state.cp[BUFFER_PIECE] != 0 {
+                let target = current_state.cp[BUFFER_PIECE] as usize;
+                let ori = current_state.co[BUFFER_PIECE]; // 交換前のco[0]を記録
 
                 let operation = CornerOperation::Swap(CornerSwapOperation::new(0, target, ori));
                 operations.push(operation.clone());
@@ -158,7 +161,7 @@ impl CornerInspection {
 
             // 別ループ探索
             if let Some(next_index) = Self::find_next_misplaced_cp(&current_state.cp) {
-                let ori = current_state.co[0]; // 交換前のco[0]を記録
+                let ori = current_state.co[BUFFER_PIECE]; // 交換前のco[BUFFER_PIECE]を記録
 
                 let operation = CornerOperation::Swap(CornerSwapOperation::new(0, next_index, ori));
                 operations.push(operation.clone());
@@ -186,7 +189,8 @@ impl CornerInspection {
 
     /// cp[i] ≠ i となる最小の i を探す
     fn find_next_misplaced_cp(cp: &[u8; 8]) -> Option<usize> {
-        for i in 0..8 {
+        // 1,3,0,4,5,6,7 で最初に cp[i] != i であるもの
+        for i in NEW_LOOP_PRIORITY {
             if cp[i] != i as u8 {
                 return Some(i);
             }
