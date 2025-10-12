@@ -1,5 +1,6 @@
 use crate::cube::State;
 use crate::explorer::NearbyOperationSearch;
+use crate::explorer::modifier::ModifiedSequence;
 use crate::inspection::{CornerInspection, CornerOperation};
 
 /// ユーザーの操作ミスを検出して提案する機能
@@ -9,7 +10,7 @@ use crate::inspection::{CornerInspection, CornerOperation};
 pub struct WrongOperationDetector {
     initial_state: State,
     correct_solution: Vec<CornerOperation>,
-    nearby_variants: Vec<(Vec<CornerOperation>, State)>,
+    nearby_variants: Vec<(ModifiedSequence, State)>,
 }
 
 impl WrongOperationDetector {
@@ -46,11 +47,11 @@ impl WrongOperationDetector {
     pub fn detect_wrong_operation(
         &self,
         wrongly_solved_state: &State,
-    ) -> Vec<&Vec<CornerOperation>> {
+    ) -> Vec<&ModifiedSequence> {
         self.nearby_variants
             .iter()
             .filter(|(_, final_state)| final_state == wrongly_solved_state)
-            .map(|(operations, _)| operations)
+            .map(|(modified_sequence, _)| modified_sequence)
             .collect()
     }
 
@@ -89,11 +90,12 @@ impl WrongOperationDetector {
                 wrong_operations.len()
             ));
 
-            for (idx, wrong_ops) in wrong_operations.iter().enumerate() {
+            for (idx, wrong_sequence) in wrong_operations.iter().enumerate() {
                 result.push_str(&format!("Possibility {}:\n", idx + 1));
                 result.push_str("Did you apply:\n");
 
-                for (i, op) in wrong_ops.iter().enumerate() {
+                let operations = wrong_sequence.get_sequence();
+                for (i, op) in operations.iter().enumerate() {
                     result.push_str(&format!("  Step {}: {}\n", i + 1, op));
                 }
                 result.push('\n');

@@ -7,5 +7,5 @@ pub mod parser;
 pub use cube::{State, RubiksCube, PartialStatePattern, SolutionSearcher, Move};
 pub use display::{CubeDisplay, CubeNetWidget, CubeColor, Face, StateToDisplay};
 pub use inspection::{CornerSwapOperation, CornerTwistOperation, CornerOperation, CornerInspection};
-pub use explorer::{NearbyOperationSearch, WrongOperationDetector};
+pub use explorer::{NearbyOperationSearch, WrongOperationDetector, SwapModifier, TwistModifier, CornerModifier, ModifiedSequence};
 pub use parser::{NotationMove, Sequence, parse_sequence, sequence_to_string, parse_and_expand, parse_3style_csv};

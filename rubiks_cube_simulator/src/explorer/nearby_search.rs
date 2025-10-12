@@ -1,5 +1,6 @@
 use crate::cube::State;
 use crate::inspection::{CornerOperation, CornerSwapOperation};
+use super::modifier::{ModifiedSequence, SwapModifier, CornerModifier};
 
 /// 操作列の近傍を探索する構造体
 ///
@@ -21,8 +22,8 @@ impl NearbyOperationSearch {
     /// * `initial_state` - 操作列を適用する初期状態
     ///
     /// # Returns
-    /// タプルのベクトル: (変更された操作列, 最終状態)
-    pub fn explore_variants(&self, initial_state: &State) -> Vec<(Vec<CornerOperation>, State)> {
+    /// タプルのベクトル: (ModifiedSequence, 最終状態)
+    pub fn explore_variants(&self, initial_state: &State) -> Vec<(ModifiedSequence, State)> {
         let mut variants = Vec::new();
 
         // 各ステップについて
@@ -36,14 +37,20 @@ impl NearbyOperationSearch {
             let alternatives = self.generate_alternatives();
 
             for alt_swap in alternatives {
-                // 操作列を複製して、step_index の位置だけ変更
-                let mut modified_ops = self.base_operations.clone();
-                modified_ops[step_index] = CornerOperation::Swap(alt_swap);
+                // ModifiedSequenceを作成
+                let mut modified = ModifiedSequence::new(self.base_operations.clone());
+                modified.add_modifier(CornerModifier::Swap(SwapModifier {
+                    step: step_index,
+                    modifier: alt_swap,
+                }));
+
+                // 変更後の操作列を取得
+                let operations = modified.get_sequence();
 
                 // 変更後の操作列を初期状態に適用
-                let final_state = self.apply_operations(initial_state, &modified_ops);
+                let final_state = self.apply_operations(initial_state, &operations);
 
-                variants.push((modified_ops, final_state));
+                variants.push((modified, final_state));
             }
         }
 
@@ -75,13 +82,8 @@ impl NearbyOperationSearch {
     }
 
     /// バリエーションを人間が読みやすい形式でフォーマット
-    pub fn format_variant(operations: &[CornerOperation]) -> String {
-        operations
-            .iter()
-            .enumerate()
-            .map(|(i, op)| format!("Step {}: {}", i + 1, op))
-            .collect::<Vec<_>>()
-            .join("\n")
+    pub fn format_variant(modified: &ModifiedSequence) -> String {
+        format!("{}", modified)
     }
 
     /// 元の操作列への参照を取得
@@ -109,10 +111,8 @@ mod tests {
         let original_solution = CornerInspection::solve_corner_permutation_with_orientation(&state);
 
         println!("\n=== Original Solution ===");
-        println!(
-            "{}",
-            NearbyOperationSearch::format_variant(&original_solution)
-        );
+        let original_modified = ModifiedSequence::new(original_solution.clone());
+        println!("{}", NearbyOperationSearch::format_variant(&original_modified));
 
         // NearbyOperationSearch を作成
         let searcher = NearbyOperationSearch::new(original_solution.clone());
@@ -131,9 +131,9 @@ mod tests {
         assert_eq!(variants.len(), swap_count * 24);
 
         // いくつかのバリエーションを表示（デバッグ用）
-        for (i, (ops, final_state)) in variants.iter().take(3).enumerate() {
+        for (i, (modified, final_state)) in variants.iter().take(3).enumerate() {
             println!("\n--- Variant {} ---", i + 1);
-            println!("{}", NearbyOperationSearch::format_variant(ops));
+            println!("{}", NearbyOperationSearch::format_variant(modified));
             println!("Final state solved: {}", final_state.is_solved());
         }
     }
@@ -175,10 +175,8 @@ mod tests {
         let original_solution = CornerInspection::solve_corner_permutation_with_orientation(&state);
 
         println!("\n=== Complex Case Original Solution ===");
-        println!(
-            "{}",
-            NearbyOperationSearch::format_variant(&original_solution)
-        );
+        let original_modified = ModifiedSequence::new(original_solution.clone());
+        println!("{}", NearbyOperationSearch::format_variant(&original_modified));
 
         let searcher = NearbyOperationSearch::new(original_solution.clone());
         let variants = searcher.explore_variants(&state);
@@ -198,9 +196,9 @@ mod tests {
 
         if !solved_variants.is_empty() {
             println!("\n--- All solved variant ---");
-            for (i, (ops, final_state)) in solved_variants.iter().enumerate() {
+            for (i, (modified, final_state)) in solved_variants.iter().enumerate() {
                 println!("\n--- Solved Variant {} ---", i + 1);
-                println!("{}", NearbyOperationSearch::format_variant(ops));
+                println!("{}", NearbyOperationSearch::format_variant(modified));
                 println!("Final state solved: {}", final_state.is_solved());
             }
         }

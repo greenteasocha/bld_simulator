@@ -10,9 +10,15 @@ pub enum NotationMove {
     R,
     R2,
     RPrime,
+    RWide,
+    RWide2,
+    RWidePrime,
     L,
     L2,
     LPrime,
+    LWide,
+    LWide2,
+    LWidePrime,
     F,
     F2,
     FPrime,
@@ -34,9 +40,15 @@ impl NotationMove {
             "R" => Ok(NotationMove::R),
             "R2" => Ok(NotationMove::R2),
             "R'" => Ok(NotationMove::RPrime),
+            "r" => Ok(NotationMove::RWide),
+            "r2" => Ok(NotationMove::RWide2),
+            "r'" => Ok(NotationMove::RWidePrime),
             "L" => Ok(NotationMove::L),
             "L2" => Ok(NotationMove::L2),
             "L'" => Ok(NotationMove::LPrime),
+            "l" => Ok(NotationMove::LWide),
+            "l2" => Ok(NotationMove::LWide2),
+            "l'" => Ok(NotationMove::LWidePrime),
             "F" => Ok(NotationMove::F),
             "F2" => Ok(NotationMove::F2),
             "F'" => Ok(NotationMove::FPrime),
@@ -59,9 +71,15 @@ impl NotationMove {
             NotationMove::R => "R".to_string(),
             NotationMove::R2 => "R2".to_string(),
             NotationMove::RPrime => "R'".to_string(),
+            NotationMove::RWide => "r".to_string(),
+            NotationMove::RWide2 => "r2".to_string(),
+            NotationMove::RWidePrime => "r'".to_string(),
             NotationMove::L => "L".to_string(),
             NotationMove::L2 => "L2".to_string(),
             NotationMove::LPrime => "L'".to_string(),
+            NotationMove::LWide => "l".to_string(),
+            NotationMove::LWide2 => "l2".to_string(),
+            NotationMove::LWidePrime => "l'".to_string(),
             NotationMove::F => "F".to_string(),
             NotationMove::F2 => "F2".to_string(),
             NotationMove::FPrime => "F'".to_string(),
@@ -83,9 +101,15 @@ impl NotationMove {
             NotationMove::R => NotationMove::RPrime,
             NotationMove::RPrime => NotationMove::R,
             NotationMove::R2 => NotationMove::R2,
+            NotationMove::RWide => NotationMove::RWidePrime,
+            NotationMove::RWidePrime => NotationMove::RWide,
+            NotationMove::RWide2 => NotationMove::RWide2,
             NotationMove::L => NotationMove::LPrime,
             NotationMove::LPrime => NotationMove::L,
             NotationMove::L2 => NotationMove::L2,
+            NotationMove::LWide => NotationMove::LWidePrime,
+            NotationMove::LWidePrime => NotationMove::LWide,
+            NotationMove::LWide2 => NotationMove::LWide2,
             NotationMove::F => NotationMove::FPrime,
             NotationMove::FPrime => NotationMove::F,
             NotationMove::F2 => NotationMove::F2,
@@ -101,11 +125,20 @@ impl NotationMove {
             NotationMove::U | NotationMove::UPrime => NotationMove::U2,
             NotationMove::D | NotationMove::DPrime => NotationMove::D2,
             NotationMove::R | NotationMove::RPrime => NotationMove::R2,
+            NotationMove::RWide | NotationMove::RWidePrime => NotationMove::RWide2,
             NotationMove::L | NotationMove::LPrime => NotationMove::L2,
+            NotationMove::LWide | NotationMove::LWidePrime => NotationMove::LWide2,
             NotationMove::F | NotationMove::FPrime => NotationMove::F2,
             NotationMove::B | NotationMove::BPrime => NotationMove::B2,
             // すでに2回転の場合はそのまま
-            m @ (NotationMove::U2 | NotationMove::D2 | NotationMove::R2 | NotationMove::L2 | NotationMove::F2 | NotationMove::B2) => m.clone(),
+            m @ (NotationMove::U2
+            | NotationMove::D2
+            | NotationMove::R2
+            | NotationMove::RWide2
+            | NotationMove::L2
+            | NotationMove::LWide2
+            | NotationMove::F2
+            | NotationMove::B2) => m.clone(),
         }
     }
 }
@@ -167,22 +200,45 @@ mod tests {
     #[test]
     fn test_parse_sequence() {
         let seq = parse_sequence("U R D R'").unwrap();
-        assert_eq!(seq, vec![NotationMove::U, NotationMove::R, NotationMove::D, NotationMove::RPrime]);
+        assert_eq!(
+            seq,
+            vec![
+                NotationMove::U,
+                NotationMove::R,
+                NotationMove::D,
+                NotationMove::RPrime
+            ]
+        );
     }
 
     #[test]
     fn test_reversed_sequence() {
-        let seq = vec![NotationMove::U, NotationMove::R, NotationMove::D, NotationMove::RPrime];
+        let seq = vec![
+            NotationMove::U,
+            NotationMove::R,
+            NotationMove::D,
+            NotationMove::RPrime,
+        ];
         let reversed = reversed_sequence(&seq);
         assert_eq!(
             reversed,
-            vec![NotationMove::R, NotationMove::DPrime, NotationMove::RPrime, NotationMove::UPrime]
+            vec![
+                NotationMove::R,
+                NotationMove::DPrime,
+                NotationMove::RPrime,
+                NotationMove::UPrime
+            ]
         );
     }
 
     #[test]
     fn test_sequence_to_string() {
-        let seq = vec![NotationMove::U, NotationMove::R, NotationMove::D, NotationMove::RPrime];
+        let seq = vec![
+            NotationMove::U,
+            NotationMove::R,
+            NotationMove::D,
+            NotationMove::RPrime,
+        ];
         assert_eq!(sequence_to_string(&seq), "U R D R'");
     }
 }

@@ -7,8 +7,8 @@ pub enum Notation {
     Comma { seq_a: Sequence, seq_b: Sequence },
     /// スラッシュ記法: move/seq
     Slash { mov: NotationMove, seq: Sequence },
-    /// コロン記法: seq_a: seq_c
-    Colon { seq_a: Sequence, seq_c: Sequence },
+    /// コロン記法: seq_a: seq_b
+    Colon { seq_a: Sequence, seq_b: Sequence },
     /// プレーンなシーケンス（記法なし）
     Plain(Sequence),
 }
@@ -36,11 +36,11 @@ impl Notation {
                 result
             }
 
-            // 規則3: seq_a: seq_c → seq_c seq_a reversed(seq_c)
-            Notation::Colon { seq_a, seq_c } => {
-                let mut result = seq_c.clone();
-                result.extend(seq_a.clone());
-                result.extend(reversed_sequence(seq_c));
+            // 規則3: seq_a: seq_b → seq_a seq_b reversed(seq_a)
+            Notation::Colon { seq_a, seq_b } => {
+                let mut result = seq_a.clone();
+                result.extend(seq_b.clone());
+                result.extend(reversed_sequence(seq_a));
                 result
             }
 
@@ -51,11 +51,11 @@ impl Notation {
 }
 
 /// 文字列から記法をパースする
-/// 
+///
 /// パースの優先順位:
-/// 1. コロン記法 (seq: seq)
-/// 2. スラッシュ記法 (move/seq)
-/// 3. カンマ記法 (seq, seq)
+/// 1. スラッシュ記法 (move/seq)
+/// 2. カンマ記法 (seq, seq)
+/// 3. コロン記法 (seq: seq)
 /// 4. プレーンなシーケンス
 pub fn parse_notation(input: &str) -> Result<Notation, String> {
     let input = input.trim();
@@ -72,9 +72,9 @@ pub fn parse_notation(input: &str) -> Result<Notation, String> {
 
         // 左側をパースして展開
         let seq_a = parse_and_expand(left)?;
-        let seq_c = parse_and_expand(right)?;
+        let seq_b = parse_and_expand(right)?;
 
-        return Ok(Notation::Colon { seq_a, seq_c });
+        return Ok(Notation::Colon { seq_a, seq_b });
     }
 
     // スラッシュ記法をチェック
@@ -114,7 +114,7 @@ pub fn parse_and_expand(input: &str) -> Result<Sequence, String> {
 }
 
 /// トップレベルのデリミタを見つける（ネストを考慮しない簡易版）
-/// 
+///
 /// 注: 本来はコロン、スラッシュ、カンマのネストを正しく扱うべきだが、
 /// 今回の仕様では左から右へのパースで十分と判断
 fn find_top_level_delimiter(input: &str, delimiter: char) -> Option<usize> {
@@ -123,8 +123,8 @@ fn find_top_level_delimiter(input: &str, delimiter: char) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::move_parser::sequence_to_string;
+    use super::*;
 
     #[test]
     fn test_comma_notation() {
@@ -134,10 +134,7 @@ mod tests {
             seq_b: vec![NotationMove::R, NotationMove::D, NotationMove::RPrime],
         };
         let expanded = notation.expand();
-        assert_eq!(
-            sequence_to_string(&expanded),
-            "U R D R' U' R D' R'"
-        );
+        assert_eq!(sequence_to_string(&expanded), "U R D R' U' R D' R'");
     }
 
     #[test]
@@ -148,42 +145,31 @@ mod tests {
             seq: vec![NotationMove::RPrime, NotationMove::UPrime, NotationMove::R],
         };
         let expanded = notation.expand();
-        assert_eq!(
-            sequence_to_string(&expanded),
-            "D R' U' R D2 R' U R D"
-        );
+        assert_eq!(sequence_to_string(&expanded), "D R' U' R D2 R' U R D");
     }
 
     #[test]
     fn test_colon_notation() {
         // R' D': (some sequence)
         let notation = Notation::Colon {
-            seq_a: vec![NotationMove::U],
-            seq_c: vec![NotationMove::RPrime, NotationMove::DPrime],
+            seq_a: vec![NotationMove::RPrime, NotationMove::DPrime],
+            seq_b: vec![NotationMove::U],
         };
         let expanded = notation.expand();
-        assert_eq!(
-            sequence_to_string(&expanded),
-            "R' D' U D R"
-        );
+
+        assert_eq!(sequence_to_string(&expanded), "R' D' U D R");
     }
 
     #[test]
     fn test_parse_comma_notation() {
         let result = parse_and_expand("U, R D R'").unwrap();
-        assert_eq!(
-            sequence_to_string(&result),
-            "U R D R' U' R D' R'"
-        );
+        assert_eq!(sequence_to_string(&result), "U R D R' U' R D' R'");
     }
 
     #[test]
     fn test_parse_slash_notation() {
         let result = parse_and_expand("D/R' U' R").unwrap();
-        assert_eq!(
-            sequence_to_string(&result),
-            "D R' U' R D2 R' U R D"
-        );
+        assert_eq!(sequence_to_string(&result), "D R' U' R D2 R' U R D");
     }
 
     #[test]
