@@ -1,7 +1,7 @@
 use crate::cube::State;
 
-const BUFFER_PIECE: usize = 0;
-const NEW_LOOP_PRIORITY: [usize; 7] = [1, 2, 3, 4, 5, 6, 7];
+const BUFFER_PIECE: usize = 2;
+const NEW_LOOP_PRIORITY: [usize; 7] = [1, 3, 0, 4, 5, 6, 7];
 
 /// コーナーの2点交換操作を表す（co考慮版）
 #[derive(Debug, Clone, PartialEq)]
@@ -149,11 +149,14 @@ impl CornerInspection {
 
         loop {
             // cp[BUFFER_PIECE]との二点交換ループ
-            while current_state.cp[BUFFER_PIECE] != 0 {
+            while current_state.cp[BUFFER_PIECE]
+                != u8::try_from(BUFFER_PIECE).expect("value too large for u8")
+            {
                 let target = current_state.cp[BUFFER_PIECE] as usize;
                 let ori = current_state.co[BUFFER_PIECE]; // 交換前のco[0]を記録
 
-                let operation = CornerOperation::Swap(CornerSwapOperation::new(0, target, ori));
+                let operation =
+                    CornerOperation::Swap(CornerSwapOperation::new(BUFFER_PIECE, target, ori));
                 operations.push(operation.clone());
 
                 current_state = operation.apply(&current_state);
@@ -163,7 +166,8 @@ impl CornerInspection {
             if let Some(next_index) = Self::find_next_misplaced_cp(&current_state.cp) {
                 let ori = current_state.co[BUFFER_PIECE]; // 交換前のco[BUFFER_PIECE]を記録
 
-                let operation = CornerOperation::Swap(CornerSwapOperation::new(0, next_index, ori));
+                let operation =
+                    CornerOperation::Swap(CornerSwapOperation::new(BUFFER_PIECE, next_index, ori));
                 operations.push(operation.clone());
 
                 current_state = operation.apply(&current_state);
