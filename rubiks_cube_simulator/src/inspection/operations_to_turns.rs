@@ -1,5 +1,5 @@
 use super::{CornerOperation, CornerSwapOperation, CornerTwistOperation};
-use crate::parser::move_parser::{parse_sequence, NotationMove, Sequence};
+use crate::parser::{parse_sequence, Sequence};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -204,7 +204,7 @@ mod tests {
 
     // テスト用の簡単なJSONデータ
     const TEST_UFR_EXPANDED: &str = r#"{
-        "BDR": {
+        "RDB": {
             "RDF": "D' R U R' D R U' R'"
         },
         "RDF": {
@@ -213,7 +213,7 @@ mod tests {
     }"#;
 
     const TEST_UFR_PARITY: &str = r#"{
-        "BDR": "U2 D' R' F R2 U' R' U' R U R' F' R U R' U D"
+        "RDB": "U2 D' R' F R2 U' R' U' R U R' F' R U R' U D"
     }"#;
 
     const TEST_UFR_TWIST: &str = r#"{
@@ -240,7 +240,7 @@ mod tests {
             .expect("Failed to convert");
 
         assert_eq!(sequences.len(), 1);
-        assert_eq!(sequences[0].description, "BDR → RDF");
+        assert_eq!(sequences[0].description, "RDB → RDF");
         assert_eq!(
             sequences[0].moves,
             parse_sequence("D' R U R' D R U' R'").unwrap()
@@ -261,7 +261,7 @@ mod tests {
             .expect("Failed to convert");
 
         assert_eq!(sequences.len(), 1);
-        assert_eq!(sequences[0].description, "Parity: BDR");
+        assert_eq!(sequences[0].description, "Parity: RDB");
     }
 
     #[test]
@@ -305,7 +305,7 @@ mod tests {
             .expect("Failed to convert");
 
         assert_eq!(sequences.len(), 2);
-        assert_eq!(sequences[0].description, "BDR → RDF");
+        assert_eq!(sequences[0].description, "RDB → RDF");
         assert_eq!(sequences[1].description, "Twist: FUL");
     }
 }
