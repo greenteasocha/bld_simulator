@@ -5,8 +5,8 @@ use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // JSONファイルを読み込む
-    let input_path = "resources/ufr.json";
-    let output_path = "resources/ufr_expanded.json";
+    let input_path = "resources/uf.json";
+    let output_path = "resources/uf_expanded.json";
 
     println!("Reading: {}", input_path);
     let content = fs::read_to_string(input_path)?;

@@ -7,10 +7,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let csv_path = if args.len() > 1 {
         &args[1]
     } else {
-        "resources/original.csv"
+        "resources/uf.csv"
     };
 
-    println!("Reading CSV file: {}", csv_path);
+    // println!("Reading CSV file: {}", csv_path);
 
     // CSVをパース
     let data = parse_3style_csv(csv_path)?;
