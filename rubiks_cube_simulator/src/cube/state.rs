@@ -139,6 +139,19 @@ impl std::fmt::Display for State {
 mod tests {
     use super::*;
 
+    // test the z-permuation algorithm solves the cube
+    // #   [test]
+    // fn test_z_permutation_solves_cube() {
+    //     // Z-permutation algorithm: M2 U M2 U M' U2 M2 U2 M' U M2 U M2
+    //     let z_permutation_moves = vec![
+    // State::new(
+    //     [0, 1, 2, 3, 4, 5, 6, 7],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 1, 2, 3, 4, 5, 6, 7, 8\, 9, 10, 11],
+    //     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    // ), // M2
+    // State::new(
+
     #[test]
     fn test_solved_state_matches_all_patterns() {
         let solved = State::solved();

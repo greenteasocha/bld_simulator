@@ -4,9 +4,15 @@ pub enum NotationMove {
     U,
     U2,
     UPrime,
+    UWide,
+    UWide2,
+    UWidePrime,
     D,
     D2,
     DPrime,
+    DWide,
+    DWide2,
+    DWidePrime,
     R,
     R2,
     RPrime,
@@ -22,9 +28,24 @@ pub enum NotationMove {
     F,
     F2,
     FPrime,
+    FWide,
+    FWide2,
+    FWidePrime,
     B,
     B2,
     BPrime,
+    BWide,
+    BWide2,
+    BWidePrime,
+    M,
+    M2,
+    MPrime,
+    S,
+    S2,
+    SPrime,
+    E,
+    E2,
+    EPrime,
 }
 
 impl NotationMove {
@@ -34,9 +55,15 @@ impl NotationMove {
             "U" => Ok(NotationMove::U),
             "U2" => Ok(NotationMove::U2),
             "U'" => Ok(NotationMove::UPrime),
+            "u" => Ok(NotationMove::UWide),
+            "u2" => Ok(NotationMove::UWide2),
+            "u'" => Ok(NotationMove::UWidePrime),
             "D" => Ok(NotationMove::D),
             "D2" => Ok(NotationMove::D2),
             "D'" => Ok(NotationMove::DPrime),
+            "d" => Ok(NotationMove::DWide),
+            "d2" => Ok(NotationMove::DWide2),
+            "d'" => Ok(NotationMove::DWidePrime),
             "R" => Ok(NotationMove::R),
             "R2" => Ok(NotationMove::R2),
             "R'" => Ok(NotationMove::RPrime),
@@ -52,9 +79,24 @@ impl NotationMove {
             "F" => Ok(NotationMove::F),
             "F2" => Ok(NotationMove::F2),
             "F'" => Ok(NotationMove::FPrime),
+            "f" => Ok(NotationMove::FWide),
+            "f2" => Ok(NotationMove::FWide2),
+            "f'" => Ok(NotationMove::FWidePrime),
             "B" => Ok(NotationMove::B),
             "B2" => Ok(NotationMove::B2),
             "B'" => Ok(NotationMove::BPrime),
+            "b" => Ok(NotationMove::BWide),
+            "b2" => Ok(NotationMove::BWide2),
+            "b'" => Ok(NotationMove::BWidePrime),
+            "M" => Ok(NotationMove::M),
+            "M2" => Ok(NotationMove::M2),
+            "M'" => Ok(NotationMove::MPrime),
+            "S" => Ok(NotationMove::S),
+            "S2" => Ok(NotationMove::S2),
+            "S'" => Ok(NotationMove::SPrime),
+            "E" => Ok(NotationMove::E),
+            "E2" => Ok(NotationMove::E2),
+            "E'" => Ok(NotationMove::EPrime),
             _ => Err(format!("Unknown move: {}", s)),
         }
     }
@@ -65,9 +107,15 @@ impl NotationMove {
             NotationMove::U => "U".to_string(),
             NotationMove::U2 => "U2".to_string(),
             NotationMove::UPrime => "U'".to_string(),
+            NotationMove::UWide => "u".to_string(),
+            NotationMove::UWide2 => "u2".to_string(),
+            NotationMove::UWidePrime => "u'".to_string(),
             NotationMove::D => "D".to_string(),
             NotationMove::D2 => "D2".to_string(),
             NotationMove::DPrime => "D'".to_string(),
+            NotationMove::DWide => "d".to_string(),
+            NotationMove::DWide2 => "d2".to_string(),
+            NotationMove::DWidePrime => "d'".to_string(),
             NotationMove::R => "R".to_string(),
             NotationMove::R2 => "R2".to_string(),
             NotationMove::RPrime => "R'".to_string(),
@@ -83,9 +131,24 @@ impl NotationMove {
             NotationMove::F => "F".to_string(),
             NotationMove::F2 => "F2".to_string(),
             NotationMove::FPrime => "F'".to_string(),
+            NotationMove::FWide => "f".to_string(),
+            NotationMove::FWide2 => "f2".to_string(),
+            NotationMove::FWidePrime => "f'".to_string(),
             NotationMove::B => "B".to_string(),
             NotationMove::B2 => "B2".to_string(),
             NotationMove::BPrime => "B'".to_string(),
+            NotationMove::BWide => "b".to_string(),
+            NotationMove::BWide2 => "b2".to_string(),
+            NotationMove::BWidePrime => "b'".to_string(),
+            NotationMove::M => "M".to_string(),
+            NotationMove::M2 => "M2".to_string(),
+            NotationMove::MPrime => "M'".to_string(),
+            NotationMove::S => "S".to_string(),
+            NotationMove::S2 => "S2".to_string(),
+            NotationMove::SPrime => "S'".to_string(),
+            NotationMove::E => "E".to_string(),
+            NotationMove::E2 => "E2".to_string(),
+            NotationMove::EPrime => "E'".to_string(),
         }
     }
 
@@ -95,9 +158,15 @@ impl NotationMove {
             NotationMove::U => NotationMove::UPrime,
             NotationMove::UPrime => NotationMove::U,
             NotationMove::U2 => NotationMove::U2,
+            NotationMove::UWide => NotationMove::UWidePrime,
+            NotationMove::UWidePrime => NotationMove::UWide,
+            NotationMove::UWide2 => NotationMove::UWide2,
             NotationMove::D => NotationMove::DPrime,
             NotationMove::DPrime => NotationMove::D,
             NotationMove::D2 => NotationMove::D2,
+            NotationMove::DWide => NotationMove::DWidePrime,
+            NotationMove::DWidePrime => NotationMove::DWide,
+            NotationMove::DWide2 => NotationMove::DWide2,
             NotationMove::R => NotationMove::RPrime,
             NotationMove::RPrime => NotationMove::R,
             NotationMove::R2 => NotationMove::R2,
@@ -113,9 +182,24 @@ impl NotationMove {
             NotationMove::F => NotationMove::FPrime,
             NotationMove::FPrime => NotationMove::F,
             NotationMove::F2 => NotationMove::F2,
+            NotationMove::FWide => NotationMove::FWidePrime,
+            NotationMove::FWidePrime => NotationMove::FWide,
+            NotationMove::FWide2 => NotationMove::FWide2,
             NotationMove::B => NotationMove::BPrime,
             NotationMove::BPrime => NotationMove::B,
             NotationMove::B2 => NotationMove::B2,
+            NotationMove::BWide => NotationMove::BWidePrime,
+            NotationMove::BWidePrime => NotationMove::BWide,
+            NotationMove::BWide2 => NotationMove::BWide2,
+            NotationMove::M => NotationMove::MPrime,
+            NotationMove::MPrime => NotationMove::M,
+            NotationMove::M2 => NotationMove::M2,
+            NotationMove::S => NotationMove::SPrime,
+            NotationMove::SPrime => NotationMove::S,
+            NotationMove::S2 => NotationMove::S2,
+            NotationMove::E => NotationMove::EPrime,
+            NotationMove::EPrime => NotationMove::E,
+            NotationMove::E2 => NotationMove::E2,
         }
     }
 
@@ -123,22 +207,36 @@ impl NotationMove {
     pub fn doubled(&self) -> Self {
         match self {
             NotationMove::U | NotationMove::UPrime => NotationMove::U2,
+            NotationMove::UWide | NotationMove::UWidePrime => NotationMove::UWide2,
             NotationMove::D | NotationMove::DPrime => NotationMove::D2,
+            NotationMove::DWide | NotationMove::DWidePrime => NotationMove::DWide2,
             NotationMove::R | NotationMove::RPrime => NotationMove::R2,
             NotationMove::RWide | NotationMove::RWidePrime => NotationMove::RWide2,
             NotationMove::L | NotationMove::LPrime => NotationMove::L2,
             NotationMove::LWide | NotationMove::LWidePrime => NotationMove::LWide2,
             NotationMove::F | NotationMove::FPrime => NotationMove::F2,
+            NotationMove::FWide | NotationMove::FWidePrime => NotationMove::FWide2,
             NotationMove::B | NotationMove::BPrime => NotationMove::B2,
+            NotationMove::BWide | NotationMove::BWidePrime => NotationMove::BWide2,
+            NotationMove::M | NotationMove::MPrime => NotationMove::M2,
+            NotationMove::S | NotationMove::SPrime => NotationMove::S2,
+            NotationMove::E | NotationMove::EPrime => NotationMove::E2,
             // すでに2回転の場合はそのまま
             m @ (NotationMove::U2
+            | NotationMove::UWide2
             | NotationMove::D2
+            | NotationMove::DWide2
             | NotationMove::R2
             | NotationMove::RWide2
             | NotationMove::L2
             | NotationMove::LWide2
             | NotationMove::F2
-            | NotationMove::B2) => m.clone(),
+            | NotationMove::FWide2
+            | NotationMove::B2
+            | NotationMove::BWide2
+            | NotationMove::M2
+            | NotationMove::S2
+            | NotationMove::E2) => m.clone(),
         }
     }
 }

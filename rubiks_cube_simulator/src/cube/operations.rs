@@ -130,8 +130,40 @@ impl RubiksCube {
             ),
         );
 
+        moves.insert(
+            "M".to_string(),
+            State::new(
+                [0, 1, 2, 3, 4, 5, 6, 7],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 2, 3, 8, 5, 4, 7, 10, 9, 6, 11],
+                [0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+            ),
+        );
+
+        moves.insert(
+            "S".to_string(),
+            State::new(
+                [0, 1, 2, 3, 4, 5, 6, 7],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 2, 9, 4, 7, 6, 3, 8, 5, 10, 11],
+                [0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0],
+            ),
+        );
+
+        moves.insert(
+            "E".to_string(),
+            State::new(
+                [0, 1, 2, 3, 4, 5, 6, 7],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [1, 2, 3, 0, 4, 5, 6, 7, 8, 9, 10, 11],
+                [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            ),
+        );
+
         // 180度回転と反時計回り90度回転を生成
-        let face_names = ["U", "u", "D", "d", "L", "l", "R", "r", "F", "f", "B", "b"];
+        let face_names = [
+            "U", "u", "D", "d", "L", "l", "R", "r", "F", "f", "B", "b", "M", "S", "E",
+        ];
         let mut cube = RubiksCube { moves };
 
         for face in &face_names {
@@ -177,5 +209,25 @@ impl RubiksCube {
 impl Default for RubiksCube {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// test
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_rubiks_cube_scramble() {
+        let cube = RubiksCube::new();
+        let scramble = "M' U M2 U M2 U M' U2 M2 U'";
+        let desired_state = State::new(
+            [0, 1, 2, 3, 4, 5, 6, 7],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 2, 3, 5, 4, 7, 6, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+
+        let result_state = cube.scramble_to_state(scramble);
+        assert_eq!(result_state, desired_state);
     }
 }
