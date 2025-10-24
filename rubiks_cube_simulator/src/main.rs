@@ -1,4 +1,4 @@
-use rubiks_cube_simulator::{State, RubiksCube, StateToDisplay, CubeNetWidget, SolutionSearcher};
+use rubiks_cube_simulator::{State, RubiksCube, StateToDisplay, CubeNetWidget, SolutionSearcher, StateInputEditor};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
@@ -139,6 +139,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                         KeyCode::Char('h') => app.toggle_help(),
                         KeyCode::Char('d') => app.toggle_debug(),
                         KeyCode::Char('r') => app.reset_cube(),
+                        KeyCode::Char('i') => {
+                            // Enter state input mode
+                            let mut editor = StateInputEditor::new();
+                            if let Ok(Some((cp, co, ep, eo))) = editor.run(terminal) {
+                                // Create state from input
+                                app.current_state = State::from_arrays(cp, co, ep, eo);
+                                app.status_message = format!("State set: cp={:?}, co={:?}, ep={:?}, eo={:?}", cp, co, ep, eo);
+                            } else {
+                                app.status_message = "State input cancelled.".to_string();
+                            }
+                        }
                         KeyCode::Tab => {
                             app.selected_element = match app.selected_element {
                                 SelectedElement::InputField => SelectedElement::SolveButton,
@@ -444,6 +455,10 @@ fn ui(f: &mut Frame, app: &App) {
             Line::from(vec![
                 Span::styled("r", Style::default().fg(Color::Yellow)),
                 Span::raw(" - Reset cube to solved state"),
+            ]),
+            Line::from(vec![
+                Span::styled("i", Style::default().fg(Color::Yellow)),
+                Span::raw(" - Enter interactive state input mode"),
             ]),
             Line::from(vec![
                 Span::styled("Tab", Style::default().fg(Color::Yellow)),

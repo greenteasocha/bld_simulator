@@ -28,6 +28,15 @@ impl State {
         }
     }
 
+    /// Create a state from arrays (used for CLI input)
+    pub fn from_arrays(cp: [usize; 8], co: [usize; 8], ep: [usize; 12], eo: [usize; 12]) -> Self {
+        let cp: [u8; 8] = cp.iter().map(|&x| x as u8).collect::<Vec<u8>>().try_into().unwrap();
+        let co: [u8; 8] = co.iter().map(|&x| x as u8).collect::<Vec<u8>>().try_into().unwrap();
+        let ep: [u8; 12] = ep.iter().map(|&x| x as u8).collect::<Vec<u8>>().try_into().unwrap();
+        let eo: [u8; 12] = eo.iter().map(|&x| x as u8).collect::<Vec<u8>>().try_into().unwrap();
+        State { cp, co, ep, eo }
+    }
+
     pub fn apply_move(&self, move_state: &State) -> State {
         let mut new_cp = [0u8; 8];
         let mut new_co = [0u8; 8];
