@@ -230,4 +230,11 @@ mod tests {
         let result_state = cube.scramble_to_state(scramble);
         assert_eq!(result_state, desired_state);
     }
+
+    #[test]
+    fn test_rubiks_cube_scramble_a() {
+        let cube = RubiksCube::new();
+        let scramble = "L2 B2 D2 R2 B F2 L2 D' U' B2 L' B' D2 L R B2 D'";
+        println!("state: {:?}", cube.scramble_to_state(scramble));
+    }
 }
