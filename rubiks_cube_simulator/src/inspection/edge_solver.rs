@@ -1,7 +1,7 @@
 use crate::cube::State;
 
-const BUFFER_PIECE: usize = 8;
-const NEW_LOOP_PRIORITY: [usize; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11];
+const BUFFER_PIECE: usize = 6;
+const NEW_LOOP_PRIORITY: [usize; 11] = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11];
 
 /// エッジの2点交換操作を表す（eo考慮版）
 #[derive(Debug, Clone, PartialEq)]
@@ -221,7 +221,7 @@ mod tests {
         let state = State::new(
             [0, 1, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 2, 3, 4, 5, 6, 7, 9, 8, 10, 11],
+            [1, 0, 2, 3, 4, 5, 7, 6, 9, 8, 10, 11],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
 
@@ -230,11 +230,13 @@ mod tests {
         // 初期 state に対して operation を順次 apply して検証
         let mut current_state = state.clone();
         for op in &operations {
+            println!("Applying operation: {}", op);
             current_state = op.apply(&current_state);
         }
 
         assert_eq!(current_state.ep, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
         assert_eq!(current_state.eo, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
         assert!(current_state.is_solved());
     }
 
@@ -299,14 +301,17 @@ mod tests {
     #[test]
     fn test_complex_case() {
         // 複雑なケース
+        // L2 B2 D2 R2 B F2 L2 D' U' B2 L' B' D2 L R B2 D'
         let state = State::new(
             [0, 1, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 6, 2, 5, 4, 3, 7, 9, 10, 11, 8],
-            [1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0],
+            [4, 1, 10, 8, 5, 0, 9, 7, 6, 2, 11, 3],
+            [0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1],
         );
 
         println!("\n=== test_complex_case ===");
+
+        println!("L2 B2 D2 R2 B F2 L2 D' U' B2 L' B' D2 L R B2 D'");
         println!("Initial state:");
         println!("  ep: {:?}", state.ep);
         println!("  eo: {:?}", state.eo);
