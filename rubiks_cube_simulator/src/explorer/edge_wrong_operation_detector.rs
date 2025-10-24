@@ -1,6 +1,6 @@
 use crate::cube::State;
-use crate::explorer::edge_nearby_search::NearbyEdgeOperationSearch;
 use crate::explorer::edge_modifier::ModifiedEdgeSequence;
+use crate::explorer::edge_nearby_search::NearbyEdgeOperationSearch;
 use crate::inspection::{EdgeInspection, EdgeOperation};
 
 /// エッジのユーザー操作ミスを検出して提案する機能
@@ -28,7 +28,12 @@ impl WrongEdgeOperationDetector {
 
         // 近傍の操作列を列挙
         let searcher = NearbyEdgeOperationSearch::new(correct_solution.clone());
-        let nearby_variants = searcher.explore_variants(&initial_state);
+
+        let nearby_variants_by_one_distance = searcher.explore_variants(&initial_state);
+        let nearby_variants_by_two_distance = searcher.explore_variants_two_changes(&initial_state);
+
+        let mut nearby_variants = nearby_variants_by_one_distance;
+        nearby_variants.extend(nearby_variants_by_two_distance);
 
         Self {
             initial_state,
@@ -94,10 +99,9 @@ impl WrongEdgeOperationDetector {
                 result.push_str(&format!("Possibility {}:\n", idx + 1));
                 result.push_str("Did you apply:\n");
 
-                let operations = wrong_sequence.get_sequence();
-                for (i, op) in operations.iter().enumerate() {
-                    result.push_str(&format!("  Step {}: {}\n", i + 1, op));
-                }
+                // fmt::Display for ModifiedEdgeSequence を利用
+                result.push_str(&format!("{}\n", wrong_sequence));
+
                 result.push('\n');
             }
         }
@@ -127,22 +131,102 @@ mod tests {
 
     #[test]
     fn test_wrong_edge_operation_detection() {
+        // Initial State:
+        // ep: [1, 2, 0, 3, 4, 7, 5, 6, 8, 9, 10, 11]
+        // eo: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        // Correct solution:
+        // Step 1: Swap: UF ↔ UR
+        // Step 2: Swap: UF ↔ UL
+        // Step 3: Swap: UF ↔ BL
+        // Step 4: Swap: UF ↔ BR
+        // Step 5: Swap: UF ↔ FR
+        // Step 6: Swap: UF ↔ BL
+
+        // Wrong solved State:
+        // ep: [0, 1, 2, 3, 4, 6, 7, 5, 8, 9, 10, 11]
+        // eo: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        // Found 1 possible wrong operation(s):
+
+        // Possibility 1:
+        // Did you apply:
+        // Step 1: **Swap: UF ↔ UL**
+        // Step 2: **Swap: UF ↔ UR**
+        // Step 3: Swap: UF ↔ BL
+        // Step 4: Swap: UF ↔ BR
+        // Step 5: Swap: UF ↔ FR
+        // Step 6: Swap: UF ↔ BL
+
         // テスト用の初期状態
         let initial_state = State::new(
             [0, 1, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 2, 0, 3, 4, 5, 6, 7, 9, 8, 10, 11],
-            [1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [1, 2, 0, 3, 4, 7, 5, 6, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
 
         let wrong_solved_state = State::new(
             [0, 1, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 2, 3, 4, 6, 7, 5, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
 
         let detector = WrongEdgeOperationDetector::new(initial_state.clone());
+        detector.detect_wrong_operation(&wrong_solved_state);
+
+        println!("\n=== Wrong Edge Operation Detection Test ===");
+        println!(
+            "\n{}",
+            detector.format_detection_result(&wrong_solved_state)
+        );
+    }
+
+    #[test]
+    fn test_wrong_one_edge_operation_detection() {
+        // FIXME: 距離1の探索で良いのに距離2からも結果が重複する
+        // Initial State:
+        // ep: [0, 1, 2, 3, 4, 7, 5, 6, 8, 9, 10, 11]
+        // eo: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        // Correct solution:
+        // Step 1: Swap: UF ↔ UR
+        // Step 2: Swap: UF ↔ UL
+
+        // Wrong solved State:
+        // ep: [0, 1, 2, 3, 7, 5, 4, 6, 8, 9, 10, 11]
+        // eo: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        // Found 2 possible wrong operation(s):
+
+        // Possibility 1:
+        // Did you apply:
+        // Step 1: Swap: UF ↔ UR
+        // Step 2: **Swap: UF ↔ UB**
+
+        // Possibility 2:
+        // Did you apply:
+        // Step 1: **Swap: UF ↔ UR**
+        // Step 2: **Swap: UF ↔ UB**
+
+        // テスト用の初期状態
+        let initial_state = State::new(
+            [0, 1, 2, 3, 4, 5, 6, 7],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 2, 3, 4, 7, 5, 6, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+
+        let wrong_solved_state = State::new(
+            [0, 1, 2, 3, 4, 5, 6, 7],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 2, 3, 7, 5, 4, 6, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+
+        let detector = WrongEdgeOperationDetector::new(initial_state.clone());
+        detector.detect_wrong_operation(&wrong_solved_state);
 
         println!("\n=== Wrong Edge Operation Detection Test ===");
         println!(
