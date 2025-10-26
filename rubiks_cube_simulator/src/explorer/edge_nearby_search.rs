@@ -229,7 +229,7 @@ mod tests {
         );
 
         // 元の解法を取得
-        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
 
         println!("\n=== Original Solution ===");
         let original_modified = ModifiedEdgeSequence::new(original_solution.clone());
@@ -272,7 +272,7 @@ mod tests {
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
 
-        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
 
         // Flip のみの操作列のはず
         assert!(original_solution
@@ -296,7 +296,7 @@ mod tests {
             [1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0],
         );
 
-        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
 
         println!("\n=== Complex Case Original Solution ===");
         let original_modified = ModifiedEdgeSequence::new(original_solution.clone());
@@ -360,7 +360,7 @@ mod tests {
         );
 
         // 元の解法を取得
-        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
 
         println!("\n=== Original Solution ===");
         let original_modified = ModifiedEdgeSequence::new(original_solution.clone());
@@ -422,7 +422,7 @@ mod tests {
             [1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0],
         );
 
-        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
 
         println!("\n=== Complex Case Original Solution ===");
         let original_modified = ModifiedEdgeSequence::new(original_solution.clone());

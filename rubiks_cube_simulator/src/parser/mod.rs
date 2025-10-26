@@ -1,4 +1,4 @@
-mod move_parser;
+pub mod move_parser;
 mod notation_expander;
 mod csv_parser;
 

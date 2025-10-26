@@ -24,7 +24,7 @@ impl WrongEdgeOperationDetector {
     pub fn new(initial_state: State) -> Self {
         // 正しい解法を計算
         let correct_solution =
-            EdgeInspection::solve_edge_permutation_with_orientation(&initial_state);
+            EdgeInspection::solve_edge_permutation_with_orientation(&initial_state, false);
 
         // 近傍の操作列を列挙
         let searcher = NearbyEdgeOperationSearch::new(correct_solution.clone());
