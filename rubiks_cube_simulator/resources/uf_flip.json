@@ -1,0 +1,14 @@
+{
+    "UB": "U' M' U M' U M' U M' U M' U' M' U' M' U' M'",
+    "UR": "R U R' M' U M' U M' U M' U M' U' M' U' M' U' M' U' R U' R'",
+    "UL": "L U' L' M' U M' U M' U M' U M' U' M' U' M' U' M' U' L U L'",
+    "UF": "",
+    "BR": "U R' M' U M' U M' U M' U M' U' M' U' M' U' M' U' R U'",
+    "FR": "U R M' U M' U M' U M' U M' U' M' U' M' U' M' U' R' U'",
+    "FL": "U' L' M' U M' U M' U M' U M' U' M' U' M' U' M' U' L U",
+    "BL": "U' L M' U M' U M' U M' U M' U' M' U' M' U' M' U' L' U",
+    "DR": "U R2 M' U M' U M' U M' U M' U' M' U' M' U' M' U' R2 U'",
+    "DL": "U' L2 M' U M' U M' U M' U M' U' M' U' M' U' M' U' L2 U",
+    "DB": "B2 U' M' U M' U M' U M' U M' U' M' U' M' U' M' B2",
+    "DF": "U2 F2 U' M' U M' U M' U M' U M' U' M' U' M' U' M' F2 U2"
+}
