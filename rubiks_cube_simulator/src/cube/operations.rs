@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn test_rubiks_cube_scramble_a() {
         let cube = RubiksCube::new();
-        let scramble = "L2 B2 D2 R2 B F2 L2 D' U' B2 L' B' D2 L R B2 D'";
+        let scramble = "D2 F' U B D' F D L F' D2 F R2 D2 B2 L2 F U2 L2 F' L2";
         println!("state: {:?}", cube.scramble_to_state(scramble));
     }
 }

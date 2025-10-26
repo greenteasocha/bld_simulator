@@ -4,6 +4,7 @@ pub mod inspection;
 pub mod explorer;
 pub mod parser;
 pub mod cli_state_input;
+pub mod workflow;
 
 pub use cube::{State, RubiksCube, PartialStatePattern, SolutionSearcher, Move};
 pub use display::{CubeDisplay, CubeNetWidget, CubeColor, Face, StateToDisplay};
@@ -19,3 +20,4 @@ pub use explorer::{
 };
 pub use parser::{NotationMove, Sequence, parse_sequence, sequence_to_string, parse_and_expand, parse_3style_csv};
 pub use cli_state_input::StateInputEditor;
+pub use workflow::{BldWorkflow};
