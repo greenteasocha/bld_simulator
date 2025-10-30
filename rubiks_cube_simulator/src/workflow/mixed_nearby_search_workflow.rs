@@ -1,5 +1,12 @@
 use crate::cube::State;
-use crate::explorer::{MixedOperation, NearbyMixedOperationSearch, ModifiedMixedSequence};
+use crate::explorer::{
+    MixedOperation, 
+    NearbyMixedOperationSearch, 
+    ModifiedMixedSequence, 
+    AlternativeGenerator,
+    CornerSwapAlternativeGenerator, 
+    EdgeSwapAlternativeGenerator
+};
 use super::bld_workflow::{BldWorkflow, BldSolution};
 
 /// Mixed Nearby Search を使用したワークフロー
@@ -24,12 +31,26 @@ impl MixedNearbySearchWorkflow {
 
         // Edge 操作を追加
         for edge_op in &solution.edge_operations {
-            mixed_ops.push(MixedOperation::Edge(edge_op.clone()));
+            match edge_op {
+                crate::inspection::EdgeOperation::Swap(swap_op) => {
+                    mixed_ops.push(MixedOperation::EdgeSwap(swap_op.clone()));
+                }
+                crate::inspection::EdgeOperation::Flip(flip_op) => {
+                    mixed_ops.push(MixedOperation::EdgeFlip(flip_op.clone()));
+                }
+            }
         }
 
         // Corner 操作を追加  
         for corner_op in &solution.corner_operations {
-            mixed_ops.push(MixedOperation::Corner(corner_op.clone()));
+            match corner_op {
+                crate::inspection::CornerOperation::Swap(swap_op) => {
+                    mixed_ops.push(MixedOperation::CornerSwap(swap_op.clone()));
+                }
+                crate::inspection::CornerOperation::Twist(twist_op) => {
+                    mixed_ops.push(MixedOperation::CornerTwist(twist_op.clone()));
+                }
+            }
         }
 
         mixed_ops
@@ -39,13 +60,17 @@ impl MixedNearbySearchWorkflow {
     pub fn find_variants_reaching_target(&self, 
         initial_state: &State, 
         target_state: &State
-    ) -> Result<Vec<(ModifiedMixedSequence, State)>, String> {
+    ) -> Result<Vec<(ModifiedMixedSequence<MixedOperation>, State)>, String> {
         // 1. 正しい操作列を取得
         let solution = self.get_correct_solution(initial_state)?;
         let mixed_operations = self.solution_to_mixed_operations(&solution);
 
         // 2. 近傍探索を実行
-        let search = NearbyMixedOperationSearch::new(mixed_operations);
+        let generators: Vec<Box<dyn AlternativeGenerator<MixedOperation>>> = vec![
+            Box::new(CornerSwapAlternativeGenerator),
+            Box::new(EdgeSwapAlternativeGenerator),
+        ];
+        let search = NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
         let variants = search.explore_variants_two_changes(initial_state);
 
         // 3. ターゲット状態に一致するものを探す
@@ -58,13 +83,17 @@ impl MixedNearbySearchWorkflow {
     }
 
     /// 全てのバリエーションを探索（最大2つの変更）
-    pub fn explore_all_variants(&self, initial_state: &State) -> Result<Vec<(ModifiedMixedSequence, State)>, String> {
+    pub fn explore_all_variants(&self, initial_state: &State) -> Result<Vec<(ModifiedMixedSequence<MixedOperation>, State)>, String> {
         // 1. 正しい操作列を取得
         let solution = self.get_correct_solution(initial_state)?;
         let mixed_operations = self.solution_to_mixed_operations(&solution);
 
         // 2. 近傍探索を実行
-        let search = NearbyMixedOperationSearch::new(mixed_operations);
+        let generators: Vec<Box<dyn AlternativeGenerator<MixedOperation>>> = vec![
+            Box::new(CornerSwapAlternativeGenerator),
+            Box::new(EdgeSwapAlternativeGenerator),
+        ];
+        let search = NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
         let variants = search.explore_variants_two_changes(initial_state);
 
         Ok(variants)

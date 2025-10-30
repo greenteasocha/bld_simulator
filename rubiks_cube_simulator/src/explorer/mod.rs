@@ -12,4 +12,14 @@ pub use modifier::{SwapModifier, TwistModifier, CornerModifier, ModifiedSequence
 pub use edge_modifier::{EdgeSwapModifier, EdgeFlipModifier, EdgeModifier, ModifiedEdgeSequence};
 pub use edge_nearby_search::NearbyEdgeOperationSearch;
 pub use edge_wrong_operation_detector::WrongEdgeOperationDetector;
-pub use mixed_nearby_search::{MixedOperation, NearbyMixedOperationSearch, ModifiedMixedSequence};
+pub use mixed_nearby_search::{
+    MixedOperation, 
+    NearbyMixedOperationSearch, 
+    ModifiedMixedSequence,
+    AlternativeGenerator,
+    ApplyableToState,
+    CornerSwapAlternativeGenerator,
+    EdgeSwapAlternativeGenerator,
+    CornerTwistAlternativeGenerator,
+    EdgeFlipAlternativeGenerator,
+};
