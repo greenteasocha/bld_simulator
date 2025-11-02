@@ -26,105 +26,36 @@ impl<'a> CubeNetWidget<'a> {
         self
     }
 
-    /// キューブの展開図をテキストで生成
-    #[allow(dead_code)]
-    fn generate_cube_net(&self) -> Vec<String> {
-        let mut lines = Vec::new();
-
-        // 上面を描画
-        if let Some(up_face) = self.cube.get_face(&Face::Up) {
-            lines.push("    ┌─────┐".to_string());
-            for row in 0..3 {
-                let mut line = "    │".to_string();
-                for col in 0..3 {
-                    let color = up_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-                line.push_str("│");
-                lines.push(line);
-            }
-            lines.push("┌───┼─────┼───┬───┐".to_string());
-        }
-
-        // 中段（左、前、右、後）を描画
-        for row in 0..3 {
-            let mut line = String::new();
-            
-            // 左面
-            line.push('│');
-            if let Some(left_face) = self.cube.get_face(&Face::Left) {
-                for col in 0..3 {
-                    let color = left_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-            }
-            
-            line.push('│');
-            
-            // 前面
-            if let Some(front_face) = self.cube.get_face(&Face::Front) {
-                for col in 0..3 {
-                    let color = front_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-            }
-            
-            line.push('│');
-            
-            // 右面
-            if let Some(right_face) = self.cube.get_face(&Face::Right) {
-                for col in 0..3 {
-                    let color = right_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-            }
-            
-            line.push('│');
-            
-            // 後面
-            if let Some(back_face) = self.cube.get_face(&Face::Back) {
-                for col in 0..3 {
-                    let color = back_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-            }
-            
-            line.push('│');
-            lines.push(line);
-        }
-
-        lines.push("└───┼─────┼───┴───┘".to_string());
-
-        // 下面を描画
-        if let Some(down_face) = self.cube.get_face(&Face::Down) {
-            for row in 0..3 {
-                let mut line = "    │".to_string();
-                for col in 0..3 {
-                    let color = down_face.get_cell(row, col);
-                    line.push(color.to_char());
-                }
-                line.push_str("│");
-                lines.push(line);
-            }
-            lines.push("    └─────┘".to_string());
-        }
-
-        lines
-    }
-
     /// カラー版の展開図を生成（ratatui用）
+    /// レイアウト: 上面(W)を前面(G)の上に配置
     fn generate_colored_spans(&self) -> Vec<Line<'static>> {
         let mut lines = Vec::new();
 
-        // 上面
+        // 各ステッカーを2文字幅で表示して罫線と幅を合わせる
+        let sticker_width = 2;
+        let face_width = sticker_width * 3; // 1面の幅 = 6文字
+
+        // 上面 (前面の上に配置)
+        // 左面(6文字) + 罫線(1文字) = 7文字分のパディング
+        let left_padding = face_width + 1;
+        
         if let Some(up_face) = self.cube.get_face(&Face::Up) {
-            lines.push(Line::from("    ┌─────┐"));
+            // 上部罫線
+            lines.push(Line::from(format!("{}┌{}┐", 
+                " ".repeat(left_padding), 
+                "─".repeat(face_width)
+            )));
+            
             for row in 0..3 {
-                let mut spans = vec![Span::raw("    │")];
+                let mut spans = vec![
+                    Span::raw(" ".repeat(left_padding)),
+                    Span::raw("│")
+                ];
                 for col in 0..3 {
                     let color = up_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -133,10 +64,18 @@ impl<'a> CubeNetWidget<'a> {
                 spans.push(Span::raw("│"));
                 lines.push(Line::from(spans));
             }
-            lines.push(Line::from("┌───┼─────┼───┬───┐"));
+            
+            // 中段への接続罫線
+            lines.push(Line::from(format!(
+                "┌{}┼{}┼{}┬{}┐",
+                "─".repeat(face_width),
+                "─".repeat(face_width),
+                "─".repeat(face_width),
+                "─".repeat(face_width)
+            )));
         }
 
-        // 中段
+        // 中段（左、前、右、後）
         for row in 0..3 {
             let mut spans = vec![Span::raw("│")];
             
@@ -144,8 +83,9 @@ impl<'a> CubeNetWidget<'a> {
             if let Some(left_face) = self.cube.get_face(&Face::Left) {
                 for col in 0..3 {
                     let color = left_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -159,8 +99,9 @@ impl<'a> CubeNetWidget<'a> {
             if let Some(front_face) = self.cube.get_face(&Face::Front) {
                 for col in 0..3 {
                     let color = front_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -174,8 +115,9 @@ impl<'a> CubeNetWidget<'a> {
             if let Some(right_face) = self.cube.get_face(&Face::Right) {
                 for col in 0..3 {
                     let color = right_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -189,8 +131,9 @@ impl<'a> CubeNetWidget<'a> {
             if let Some(back_face) = self.cube.get_face(&Face::Back) {
                 for col in 0..3 {
                     let color = back_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -202,16 +145,27 @@ impl<'a> CubeNetWidget<'a> {
             lines.push(Line::from(spans));
         }
 
-        lines.push(Line::from("└───┼─────┼───┴───┘"));
+        // 下段への接続罫線
+        lines.push(Line::from(format!(
+            "└{}┼{}┼{}┴{}┘",
+            "─".repeat(face_width),
+            "─".repeat(face_width),
+            "─".repeat(face_width),
+            "─".repeat(face_width)
+        )));
 
-        // 下面
+        // 下面 (前面の下に配置)
         if let Some(down_face) = self.cube.get_face(&Face::Down) {
             for row in 0..3 {
-                let mut spans = vec![Span::raw("    │")];
+                let mut spans = vec![
+                    Span::raw(" ".repeat(left_padding)),
+                    Span::raw("│")
+                ];
                 for col in 0..3 {
                     let color = down_face.get_cell(row, col);
+                    let char_display = format!("{:width$}", color.to_char(), width = sticker_width);
                     spans.push(Span::styled(
-                        color.to_char().to_string(),
+                        char_display,
                         Style::default()
                             .bg(color.to_ratatui_color())
                             .fg(Color::Black)
@@ -220,7 +174,12 @@ impl<'a> CubeNetWidget<'a> {
                 spans.push(Span::raw("│"));
                 lines.push(Line::from(spans));
             }
-            lines.push(Line::from("    └─────┘"));
+            
+            // 下部罫線
+            lines.push(Line::from(format!("{}└{}┘", 
+                " ".repeat(left_padding),
+                "─".repeat(face_width)
+            )));
         }
 
         lines

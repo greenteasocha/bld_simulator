@@ -2,6 +2,20 @@
 name = "rubiks_cube_simulator"
 version = "0.1.0"
 edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Interactive Rubik's Cube state editor with combined nearby search workflow"
+repository = "https://github.com/yourusername/rubiks_cube_simulator"
+license = "MIT"
+keywords = ["rubiks-cube", "puzzle", "solver", "tui"]
+categories = ["games", "command-line-utilities"]
+
+[[bin]]
+name = "rubiks_cube_simulator"
+path = "src/main.rs"
+
+[lib]
+name = "rubiks_cube_simulator"
+path = "src/lib.rs"
 
 [dependencies]
 ratatui = { version = "0.28", features = ["crossterm"] }
