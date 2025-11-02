@@ -140,7 +140,7 @@ mod tests {
     fn test_collection_modifier_basic() {
         let original_seq = vec![NotationMove::R, NotationMove::U];
         let mut modified_seq = ModifiedMoveSequence::new(original_seq);
-        modified_seq.add_modifier(MoveModifier::new(0, Some(NotationMove::R2)));
+        modified_seq.add_modifier(MoveModifier::new(0, NotationMove::R2));
 
         let modifier = CollectionModifier::new(0, modified_seq);
         
@@ -158,7 +158,7 @@ mod tests {
 
         // 最初のSequenceを変更
         let mut modified_seq = ModifiedMoveSequence::new(original_collection[0].clone());
-        modified_seq.add_modifier(MoveModifier::new(0, Some(NotationMove::R2)));
+        modified_seq.add_modifier(MoveModifier::new(0, NotationMove::R2));
         modified_collection.add_modifier(CollectionModifier::new(0, modified_seq));
 
         // 変更が反映されているか確認
@@ -199,7 +199,7 @@ mod tests {
         let mut modified_collection = ModifiedMoveSequenceCollection::new(original_collection.clone());
 
         let mut modified_seq = ModifiedMoveSequence::new(original_collection[0].clone());
-        modified_seq.add_modifier(MoveModifier::new(0, Some(NotationMove::R2)));
+        modified_seq.add_modifier(MoveModifier::new(0, NotationMove::R2));
         modified_collection.add_modifier(CollectionModifier::new(0, modified_seq));
 
         let display = format!("{}", modified_collection);

@@ -29,7 +29,7 @@ impl MoveModifier {
 }
 
 /// 変更されたMoveSequence
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModifiedMoveSequence {
     /// 元のSequence
     pub original_sequence: Sequence,
