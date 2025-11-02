@@ -23,15 +23,6 @@ impl MoveSequence {
         }
     }
 
-    /// 別の MoveSequence を追加
-    pub fn extend(&mut self, other: MoveSequence) {
-        self.moves.extend(other.moves);
-        if !self.description.is_empty() && !other.description.is_empty() {
-            self.description.push_str(", ");
-        }
-        self.description.push_str(&other.description);
-    }
-
     /// 空かどうか
     pub fn is_empty(&self) -> bool {
         self.moves.is_empty()
@@ -42,6 +33,133 @@ impl std::fmt::Display for MoveSequence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use crate::parser::sequence_to_string;
         write!(f, "{}", sequence_to_string(&self.moves))
+    }
+}
+
+/// MoveSequenceの集合を管理する構造体
+#[derive(Debug, Clone, PartialEq)]
+pub struct MoveSequenceCollection {
+    sequences: Vec<MoveSequence>,
+}
+
+impl MoveSequenceCollection {
+    /// 新しい空のコレクションを作成
+    pub fn new() -> Self {
+        Self {
+            sequences: Vec::new(),
+        }
+    }
+
+    /// 単一のMoveSequenceからコレクションを作成
+    pub fn from_single(sequence: MoveSequence) -> Self {
+        Self {
+            sequences: vec![sequence],
+        }
+    }
+
+    /// MoveSequenceのVecからコレクションを作成
+    pub fn from_vec(sequences: Vec<MoveSequence>) -> Self {
+        Self { sequences }
+    }
+
+    /// MoveSequenceを追加
+    pub fn push(&mut self, sequence: MoveSequence) {
+        self.sequences.push(sequence);
+    }
+
+    /// 別のコレクションを追加
+    pub fn extend(&mut self, other: MoveSequenceCollection) {
+        self.sequences.extend(other.sequences);
+    }
+
+    /// 内部のVecへの参照を取得
+    pub fn sequences(&self) -> &[MoveSequence] {
+        &self.sequences
+    }
+
+    /// 内部のVecを消費して取得
+    pub fn into_sequences(self) -> Vec<MoveSequence> {
+        self.sequences
+    }
+
+    /// 空かどうか
+    pub fn is_empty(&self) -> bool {
+        self.sequences.is_empty()
+    }
+
+    /// コレクション内のシーケンス数
+    pub fn len(&self) -> usize {
+        self.sequences.len()
+    }
+
+    /// すべてのmovesを結合した単一のSequenceを取得
+    pub fn flatten_moves(&self) -> Sequence {
+        self.sequences
+            .iter()
+            .flat_map(|seq| seq.moves.clone())
+            .collect()
+    }
+
+    /// すべてのdescriptionを結合した文字列を取得
+    pub fn flatten_description(&self, separator: &str) -> String {
+        self.sequences
+            .iter()
+            .map(|seq| seq.description.as_str())
+            .filter(|desc| !desc.is_empty())
+            .collect::<Vec<_>>()
+            .join(separator)
+    }
+
+    /// 単一のMoveSequenceに統合（後方互換性のため）
+    pub fn into_single(self) -> MoveSequence {
+        let moves = self.flatten_moves();
+        let description = self.flatten_description(", ");
+        MoveSequence::new(moves, description)
+    }
+}
+
+impl Default for MoveSequenceCollection {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for MoveSequenceCollection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use crate::parser::sequence_to_string;
+        
+        for (i, seq) in self.sequences.iter().enumerate() {
+            if i > 0 {
+                writeln!(f)?;
+            }
+            
+            // descriptionがある場合は表示
+            if !seq.description.is_empty() {
+                write!(f, "// {}\n", seq.description)?;
+            }
+            
+            write!(f, "{}", sequence_to_string(&seq.moves))?;
+        }
+        
+        Ok(())
+    }
+}
+
+impl IntoIterator for MoveSequenceCollection {
+    type Item = MoveSequence;
+    type IntoIter = std::vec::IntoIter<MoveSequence>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.sequences.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a MoveSequenceCollection {
+    type Item = &'a MoveSequence;
+    type IntoIter = std::slice::Iter<'a, MoveSequence>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.sequences.iter()
     }
 }
 
@@ -167,8 +285,14 @@ impl OperationsToTurns {
         })
     }
 
-    /// CornerOperation列を MoveSequence列に変換
-    pub fn convert(&self, operations: &[CornerOperation]) -> Result<Vec<MoveSequence>, String> {
+    /// CornerOperation列を MoveSequenceCollection に変換
+    pub fn convert(&self, operations: &[CornerOperation]) -> Result<MoveSequenceCollection, String> {
+        let sequences = self.convert_to_vec(operations)?;
+        Ok(MoveSequenceCollection::from_vec(sequences))
+    }
+
+    /// CornerOperation列を MoveSequence の Vec に変換（内部用）
+    fn convert_to_vec(&self, operations: &[CornerOperation]) -> Result<Vec<MoveSequence>, String> {
         let mut result = Vec::new();
         let mut i = 0;
 
@@ -271,8 +395,14 @@ impl OperationsToTurns {
         }
     }
 
-    /// EdgeOperation列を MoveSequence列に変換
-    pub fn convert_edge_operations(&self, operations: &[EdgeOperation]) -> Result<Vec<MoveSequence>, String> {
+    /// EdgeOperation列を MoveSequenceCollection に変換
+    pub fn convert_edge_operations(&self, operations: &[EdgeOperation]) -> Result<MoveSequenceCollection, String> {
+        let sequences = self.convert_edge_to_vec(operations)?;
+        Ok(MoveSequenceCollection::from_vec(sequences))
+    }
+
+    /// EdgeOperation列を MoveSequence の Vec に変換（内部用）
+    fn convert_edge_to_vec(&self, operations: &[EdgeOperation]) -> Result<Vec<MoveSequence>, String> {
         let mut result = Vec::new();
         let mut i = 0;
 
@@ -395,7 +525,7 @@ mod tests {
         let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
             .expect("Failed to create converter");
 
-        // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "BDR"
+        // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "RDB"
         // Swap: UFR ↔ DFR (ori: 1) → target_sticker = "RDF"
         let swap1 = CornerSwapOperation::new(2, 5, 2); // UFR ↔ DBR (ori: 2)
         let swap2 = CornerSwapOperation::new(2, 6, 1); // UFR ↔ DFR (ori: 1)
@@ -405,11 +535,12 @@ mod tests {
             CornerOperation::Swap(swap2),
         ];
 
-        let sequences = converter
+        let collection = converter
             .convert(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 1);
+        assert_eq!(collection.len(), 1);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "RDB → RDF");
         assert_eq!(
             sequences[0].moves,
@@ -422,15 +553,16 @@ mod tests {
         let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
             .expect("Failed to create converter");
 
-        // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "BDR"
+        // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "RDB"
         let swap = CornerSwapOperation::new(2, 5, 2);
         let operations = vec![CornerOperation::Swap(swap)];
 
-        let sequences = converter
+        let collection = converter
             .convert(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 1);
+        assert_eq!(collection.len(), 1);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "Parity: RDB");
     }
 
@@ -443,11 +575,12 @@ mod tests {
         let twist = CornerTwistOperation::new(3, 1);
         let operations = vec![CornerOperation::Twist(twist)];
 
-        let sequences = converter
+        let collection = converter
             .convert(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 1);
+        assert_eq!(collection.len(), 1);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "Twist: FUL");
         assert_eq!(
             sequences[0].moves,
@@ -460,7 +593,7 @@ mod tests {
         let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
             .expect("Failed to create converter");
 
-        let swap1 = CornerSwapOperation::new(2, 5, 2); // BDR
+        let swap1 = CornerSwapOperation::new(2, 5, 2); // RDB
         let swap2 = CornerSwapOperation::new(2, 6, 1); // RDF
         let twist = CornerTwistOperation::new(3, 1); // FUL
 
@@ -470,13 +603,51 @@ mod tests {
             CornerOperation::Twist(twist),
         ];
 
-        let sequences = converter
+        let collection = converter
             .convert(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 2);
+        assert_eq!(collection.len(), 2);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "RDB → RDF");
         assert_eq!(sequences[1].description, "Twist: FUL");
+    }
+
+    #[test]
+    fn test_collection_operations() {
+        let seq1 = MoveSequence::new(vec![], "First".to_string());
+        let seq2 = MoveSequence::new(vec![], "Second".to_string());
+        let seq3 = MoveSequence::new(vec![], "Third".to_string());
+
+        let mut collection = MoveSequenceCollection::new();
+        collection.push(seq1);
+        collection.push(seq2);
+
+        assert_eq!(collection.len(), 2);
+        assert!(!collection.is_empty());
+
+        let mut collection2 = MoveSequenceCollection::from_single(seq3);
+        collection.extend(collection2);
+
+        assert_eq!(collection.len(), 3);
+
+        let descriptions = collection.flatten_description(", ");
+        assert_eq!(descriptions, "First, Second, Third");
+    }
+
+    #[test]
+    fn test_collection_iteration() {
+        let seq1 = MoveSequence::new(vec![], "First".to_string());
+        let seq2 = MoveSequence::new(vec![], "Second".to_string());
+
+        let collection = MoveSequenceCollection::from_vec(vec![seq1, seq2]);
+
+        let mut count = 0;
+        for seq in &collection {
+            count += 1;
+            assert!(!seq.description.is_empty());
+        }
+        assert_eq!(count, 2);
     }
 
     #[test]
@@ -484,7 +655,7 @@ mod tests {
         let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
             .expect("Failed to create converter");
 
-        // Swap: UF ↔ FR (ori: 0) → target_sticker = "RF"
+        // Swap: UF ↔ FR (ori: 0) → target_sticker = "FR"
         // Swap: UF ↔ DL (ori: 0) → target_sticker = "DL"
         let swap1 = EdgeSwapOperation::new(6, 2, 0); // UF ↔ FR (ori: 0)
         let swap2 = EdgeSwapOperation::new(6, 11, 0); // UF ↔ DL (ori: 0)
@@ -494,11 +665,12 @@ mod tests {
             EdgeOperation::Swap(swap2),
         ];
 
-        let sequences = converter
+        let collection = converter
             .convert_edge_operations(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 1);
+        assert_eq!(collection.len(), 1);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "FR → DL");
         assert_eq!(
             sequences[0].moves,
@@ -515,11 +687,12 @@ mod tests {
         let flip = EdgeFlipOperation::new(4);
         let operations = vec![EdgeOperation::Flip(flip)];
 
-        let sequences = converter
+        let collection = converter
             .convert_edge_operations(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 1);
+        assert_eq!(collection.len(), 1);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "Flip: UB");
         assert_eq!(
             sequences[0].moves,
@@ -532,8 +705,8 @@ mod tests {
         let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
             .expect("Failed to create converter");
 
-        let swap1 = EdgeSwapOperation::new(6, 2, 0); // RF
-        let swap2 = EdgeSwapOperation::new(6, 9, 0); // RD
+        let swap1 = EdgeSwapOperation::new(6, 2, 0); // FR
+        let swap2 = EdgeSwapOperation::new(6, 9, 0); // DR
         let flip = EdgeFlipOperation::new(5); // UR
 
         let operations = vec![
@@ -542,12 +715,43 @@ mod tests {
             EdgeOperation::Flip(flip),
         ];
 
-        let sequences = converter
+        let collection = converter
             .convert_edge_operations(&operations)
             .expect("Failed to convert");
 
-        assert_eq!(sequences.len(), 2);
+        assert_eq!(collection.len(), 2);
+        let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "FR → DR");
         assert_eq!(sequences[1].description, "Flip: UR");
+    }
+
+    #[test]
+    fn test_collection_display() {
+        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
+            .expect("Failed to create converter");
+
+        let swap1 = CornerSwapOperation::new(2, 5, 2); // RDB
+        let swap2 = CornerSwapOperation::new(2, 6, 1); // RDF
+        let twist = CornerTwistOperation::new(3, 1); // FUL
+
+        let operations = vec![
+            CornerOperation::Swap(swap1),
+            CornerOperation::Swap(swap2),
+            CornerOperation::Twist(twist),
+        ];
+
+        let collection = converter
+            .convert(&operations)
+            .expect("Failed to convert");
+
+        let display = format!("{}", collection);
+        println!("\n=== Display Output ===\n{}", display);
+
+        // 改行が含まれていることを確認
+        assert!(display.contains('\n'));
+        
+        // descriptionがコメントとして含まれていることを確認
+        assert!(display.contains("// RDB → RDF"));
+        assert!(display.contains("// Twist: FUL"));
     }
 }

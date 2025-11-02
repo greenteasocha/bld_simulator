@@ -1,6 +1,6 @@
 use crate::cube::State;
 use crate::inspection::{CornerInspection, CornerOperation, EdgeInspection, EdgeOperation};
-use crate::inspection::{MoveSequence, OperationsToTurns};
+use crate::inspection::{MoveSequenceCollection, OperationsToTurns};
 
 /// BLD (Blindfolded) solving workflow
 ///
@@ -18,8 +18,8 @@ pub struct BldSolution {
     pub edge_operations: Vec<EdgeOperation>,
     /// 結合された全操作列 (Edge → Corner の順)
     pub all_operations: AllOperations,
-    /// Move Sequence (Edge → Corner の順)
-    pub move_sequence: MoveSequence,
+    /// Move Sequence Collection (Edge → Corner の順)
+    pub move_sequences: MoveSequenceCollection,
 }
 
 /// Corner と Edge の操作を統合した列挙型
@@ -131,14 +131,14 @@ impl BldWorkflow {
     /// * `state` - 現在のキューブ状態
     ///
     /// # Returns
-    /// Corner と Edge の操作列、および Move Sequence を含む BldSolution
+    /// Corner と Edge の操作列、および Move Sequence Collection を含む BldSolution
     ///
     /// # ワークフロー
     /// 1. Corner workflow を実行し、Corner 用の操作列を取得
     /// 2. Corner の Swap 操作数が奇数の場合、Edge workflow で交換分析モードを使用
     /// 3. Edge workflow を実行し、Edge 用の操作列を取得
     /// 4. Edge → Corner の順で操作列を結合
-    /// 5. 操作列から Move Sequence を生成
+    /// 5. 操作列から Move Sequence Collection を生成
     pub fn solve(&self, state: &State) -> Result<BldSolution, String> {
         // 1. Corner workflow を実行
         let corner_operations =
@@ -168,26 +168,22 @@ impl BldWorkflow {
             all_operations.push_corner(op.clone());
         }
 
-        // 5. Move Sequence を生成 (Edge → Corner)
-        let mut move_sequence = MoveSequence::empty();
+        // 5. Move Sequence Collection を生成 (Edge → Corner)
+        let mut move_sequences = MoveSequenceCollection::new();
         
-        // Edge operations を move sequences に変換
+        // Edge operations を move sequences に変換して追加
         let edge_sequences = self.operations_converter.convert_edge_operations(&edge_operations)?;
-        for seq in edge_sequences {
-            move_sequence.extend(seq);
-        }
+        move_sequences.extend(edge_sequences);
         
-        // Corner operations を move sequences に変換
+        // Corner operations を move sequences に変換して追加
         let corner_sequences = self.operations_converter.convert(&corner_operations)?;
-        for seq in corner_sequences {
-            move_sequence.extend(seq);
-        }
+        move_sequences.extend(corner_sequences);
 
         Ok(BldSolution {
             corner_operations,
             edge_operations,
             all_operations,
-            move_sequence,
+            move_sequences,
         })
     }
 
@@ -228,9 +224,19 @@ impl BldWorkflow {
         }
         result.push('\n');
 
-        // Move Sequence
-        result.push_str("Move Sequence:\n");
-        result.push_str(&format!("  {}\n", solution.move_sequence));
+        // Move Sequences (各MoveSequenceごとに改行して表示)
+        result.push_str("Move Sequences:\n");
+        if solution.move_sequences.is_empty() {
+            result.push_str("  (none)\n");
+        } else {
+            // 各MoveSequenceを表示（インデント付き）
+            for sequence in solution.move_sequences.sequences() {
+                if !sequence.description.is_empty() {
+                    result.push_str(&format!("  // {}\n", sequence.description));
+                }
+                result.push_str(&format!("  {}\n", sequence));
+            }
+        }
 
         result
     }
@@ -302,6 +308,9 @@ mod tests {
         
         // 全操作列は Edge + Corner = 2
         assert_eq!(solution.all_operations.len(), 2);
+        
+        // MoveSequences が空でないことを確認
+        assert!(!solution.move_sequences.is_empty());
     }
 
     #[test]
@@ -318,7 +327,7 @@ mod tests {
         assert!(solution.corner_operations.is_empty());
         assert!(solution.edge_operations.is_empty());
         assert!(solution.all_operations.is_empty());
-        assert!(solution.move_sequence.is_empty());
+        assert!(solution.move_sequences.is_empty());
     }
 
     #[test]
@@ -407,6 +416,10 @@ mod tests {
             solution.all_operations.len(),
             solution.edge_operations.len() + solution.corner_operations.len()
         );
+        
+        // MoveSequences の数を確認
+        println!("Total MoveSequences: {}", solution.move_sequences.len());
+        assert!(!solution.move_sequences.is_empty());
     }
 
     #[test]
@@ -467,5 +480,30 @@ mod tests {
         println!("Parity (odd swaps): {}", corner_swap_count % 2 == 1);
         
         println!("{}", BldWorkflow::format_solution(&solution));
+    }
+
+    #[test]
+    fn test_move_sequences_display() {
+        // MoveSequences の表示形式を確認
+        let state = State::new(
+            [1, 0, 2, 3, 4, 5, 6, 7],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+
+        println!("\n=== Move Sequences Display Test ===");
+        
+        let workflow = create_test_workflow();
+        let solution = workflow.solve(&state).expect("Failed to solve");
+        
+        // 各MoveSequenceを個別に表示
+        println!("Individual MoveSequences:");
+        for (i, seq) in solution.move_sequences.sequences().iter().enumerate() {
+            println!("  Sequence {}: {} - {}", i + 1, seq.description, seq);
+        }
+        
+        // フォーマット済みの出力を表示
+        println!("\n{}", BldWorkflow::format_solution(&solution));
     }
 }
