@@ -23,8 +23,8 @@ An interactive TUI (Text User Interface) application for Rubik's Cube state edit
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/rubiks_cube_simulator.git
-cd rubiks_cube_simulator
+git clone https://github.com/greenteasocha/bld_simulator
+cd bld_simulator
 ```
 
 2. Build and run:
@@ -36,12 +36,12 @@ cargo run --release
 ### Using Cargo Install
 
 ```bash
-cargo install --git https://github.com/yourusername/rubiks_cube_simulator
+cargo install --git https://github.com/greenteasocha/bld_simulator
 ```
 
 After installation, run:
 ```bash
-rubiks_cube_simulator
+bld_simulator
 ```
 
 ## Usage
@@ -52,7 +52,7 @@ rubiks_cube_simulator
 ```bash
 cargo run --release
 # or if installed:
-rubiks_cube_simulator
+bld_simulator
 ```
 
 2. **Input Fields**:

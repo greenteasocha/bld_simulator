@@ -1,5 +1,5 @@
-use rubiks_cube_simulator::{State, StateInputEditor};
-use rubiks_cube_simulator::workflow::CombinedNearbySearchWorkflow;
+use bld_simulator::{State, StateInputEditor};
+use bld_simulator::workflow::CombinedNearbySearchWorkflow;
 use ratatui::{
     backend::CrosstermBackend,
     crossterm::{

@@ -1,20 +1,19 @@
 [package]
-name = "rubiks_cube_simulator"
+name = "bld_simulator"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["greenteasocha <kouheiatts@gmail.com>"]
 description = "Interactive Rubik's Cube state editor with combined nearby search workflow"
-repository = "https://github.com/yourusername/rubiks_cube_simulator"
-license = "MIT"
+repository = "https://https://github.com/greenteasocha/bld_simulator"
 keywords = ["rubiks-cube", "puzzle", "solver", "tui"]
 categories = ["games", "command-line-utilities"]
 
 [[bin]]
-name = "rubiks_cube_simulator"
+name = "bld_simulator"
 path = "src/main.rs"
 
 [lib]
-name = "rubiks_cube_simulator"
+name = "bld_simulator"
 path = "src/lib.rs"
 
 [dependencies]
