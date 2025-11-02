@@ -66,7 +66,9 @@ impl MixedNearbySearchWorkflow {
         // 2. 近傍探索を実行
         let generators: Vec<Box<dyn AlternativeGenerator<MixedOperation>>> = vec![
             Box::new(CornerSwapAlternativeGenerator),
+            Box::new(CornerTwistAlternativeGenerator),
             Box::new(EdgeSwapAlternativeGenerator),
+            Box::new(EdgeFlipAlternativeGenerator),
         ];
         let search =
             NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);

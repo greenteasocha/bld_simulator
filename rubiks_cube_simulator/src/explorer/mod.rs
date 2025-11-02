@@ -23,10 +23,6 @@ pub use mixed_nearby_search::{
 pub use mixed_modifier::{
     ModifiedMixedSequence,
     MixedModifier,
-    MixedCornerSwapModifier,
-    MixedCornerTwistModifier,
-    MixedEdgeSwapModifier,
-    MixedEdgeFlipModifier,
 };
 pub use alternative_generator::{
     CornerSwapAlternativeGenerator,

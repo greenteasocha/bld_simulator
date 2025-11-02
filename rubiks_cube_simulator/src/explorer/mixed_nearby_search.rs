@@ -1,7 +1,4 @@
-use super::mixed_modifier::{
-    MixedCornerSwapModifier, MixedCornerTwistModifier, MixedEdgeFlipModifier,
-    MixedEdgeSwapModifier, MixedModifier, ModifiedMixedSequence,
-};
+use super::mixed_modifier::{MixedModifier, ModifiedMixedSequence};
 use crate::cube::State;
 
 /// 混合操作（Corner + Edge）の列挙型
@@ -168,25 +165,6 @@ impl NearbyMixedOperationSearch {
 
     /// MixedOperationからMixedModifierを作成
     fn create_modifier(&self, step: usize, operation: &MixedOperation) -> MixedModifier {
-        match operation {
-            MixedOperation::CornerSwap(op) => MixedModifier::CornerSwap(MixedCornerSwapModifier {
-                step,
-                modifier: op.clone(),
-            }),
-            MixedOperation::CornerTwist(op) => {
-                MixedModifier::CornerTwist(MixedCornerTwistModifier {
-                    step,
-                    modifier: op.clone(),
-                })
-            }
-            MixedOperation::EdgeSwap(op) => MixedModifier::EdgeSwap(MixedEdgeSwapModifier {
-                step,
-                modifier: op.clone(),
-            }),
-            MixedOperation::EdgeFlip(op) => MixedModifier::EdgeFlip(MixedEdgeFlipModifier {
-                step,
-                modifier: op.clone(),
-            }),
-        }
+        MixedModifier::new(step, operation.clone())
     }
 }

@@ -1,72 +1,32 @@
 use crate::cube::State;
 use super::mixed_nearby_search::{MixedOperation, ApplyableToState};
-use crate::inspection::{CornerSwapOperation, CornerTwistOperation, EdgeSwapOperation, EdgeFlipOperation};
 use std::fmt;
 
-/// Corner Swap操作の変更を表す
-#[derive(Debug, Clone, PartialEq)]
-pub struct MixedCornerSwapModifier {
-    /// 変更対象のステップ番号
-    pub step: usize,
-    /// 新しいCorner Swap操作
-    pub modifier: CornerSwapOperation,
-}
-
-/// Corner Twist操作の変更を表す
-#[derive(Debug, Clone, PartialEq)]
-pub struct MixedCornerTwistModifier {
-    /// 変更対象のステップ番号
-    pub step: usize,
-    /// 新しいCorner Twist操作
-    pub modifier: CornerTwistOperation,
-}
-
-/// Edge Swap操作の変更を表す
-#[derive(Debug, Clone, PartialEq)]
-pub struct MixedEdgeSwapModifier {
-    /// 変更対象のステップ番号
-    pub step: usize,
-    /// 新しいEdge Swap操作
-    pub modifier: EdgeSwapOperation,
-}
-
-/// Edge Flip操作の変更を表す
-#[derive(Debug, Clone, PartialEq)]
-pub struct MixedEdgeFlipModifier {
-    /// 変更対象のステップ番号
-    pub step: usize,
-    /// 新しいEdge Flip操作
-    pub modifier: EdgeFlipOperation,
-}
-
 /// Mixed操作の変更を表す
+/// 
+/// MixedOperationに新しい操作タイプを追加しても、この構造体は変更不要
 #[derive(Debug, Clone, PartialEq)]
-pub enum MixedModifier {
-    CornerSwap(MixedCornerSwapModifier),
-    CornerTwist(MixedCornerTwistModifier),
-    EdgeSwap(MixedEdgeSwapModifier),
-    EdgeFlip(MixedEdgeFlipModifier),
+pub struct MixedModifier {
+    /// 変更対象のステップ番号
+    pub step: usize,
+    /// 新しい操作
+    pub modifier: MixedOperation,
 }
 
 impl MixedModifier {
+    /// 新しいMixedModifierを作成
+    pub fn new(step: usize, modifier: MixedOperation) -> Self {
+        Self { step, modifier }
+    }
+
     /// 変更対象のステップ番号を取得
     pub fn step(&self) -> usize {
-        match self {
-            MixedModifier::CornerSwap(m) => m.step,
-            MixedModifier::CornerTwist(m) => m.step,
-            MixedModifier::EdgeSwap(m) => m.step,
-            MixedModifier::EdgeFlip(m) => m.step,
-        }
+        self.step
     }
 
     /// 変更後のMixedOperationを取得
-    pub fn operation(&self) -> MixedOperation {
-        match self {
-            MixedModifier::CornerSwap(m) => MixedOperation::CornerSwap(m.modifier.clone()),
-            MixedModifier::CornerTwist(m) => MixedOperation::CornerTwist(m.modifier.clone()),
-            MixedModifier::EdgeSwap(m) => MixedOperation::EdgeSwap(m.modifier.clone()),
-            MixedModifier::EdgeFlip(m) => MixedOperation::EdgeFlip(m.modifier.clone()),
-        }
+    pub fn operation(&self) -> &MixedOperation {
+        &self.modifier
     }
 }
 
@@ -101,7 +61,7 @@ impl ModifiedMixedSequence {
         for modifier in &self.modifiers {
             let step = modifier.step();
             if step < result.len() {
-                result[step] = modifier.operation();
+                result[step] = modifier.operation().clone();
             }
         }
 
@@ -139,16 +99,108 @@ impl ModifiedMixedSequence {
         
         state
     }
+
+    /// 指定したステップが変更されているか確認
+    pub fn is_modified(&self, step: usize) -> bool {
+        self.modifiers.iter().any(|m| m.step() == step)
+    }
 }
 
 impl fmt::Display for ModifiedMixedSequence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let operations = self.get_sequence();
         for (i, op) in operations.iter().enumerate() {
-            let is_modified = self.modifiers.iter().any(|m| m.step() == i);
+            let is_modified = self.is_modified(i);
             let marker = if is_modified { "**" } else { "" };
             writeln!(f, "Step {}: {}{}{}", i + 1, marker, op, marker)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::inspection::{CornerSwapOperation, EdgeSwapOperation};
+
+    #[test]
+    fn test_mixed_modifier_basic() {
+        let corner_swap = MixedOperation::CornerSwap(CornerSwapOperation::new(0, 1, 0));
+        let modifier = MixedModifier::new(0, corner_swap.clone());
+        
+        assert_eq!(modifier.step(), 0);
+        assert_eq!(modifier.operation(), &corner_swap);
+    }
+
+    #[test]
+    fn test_modified_mixed_sequence() {
+        let original = vec![
+            MixedOperation::CornerSwap(CornerSwapOperation::new(0, 1, 0)),
+            MixedOperation::EdgeSwap(EdgeSwapOperation::new(8, 0, 0)),
+        ];
+
+        let mut modified = ModifiedMixedSequence::new(original.clone());
+
+        // 変更を追加
+        let new_op = MixedOperation::CornerSwap(CornerSwapOperation::new(0, 2, 1));
+        modified.add_modifier(MixedModifier::new(0, new_op));
+
+        // 変更が反映されているか確認
+        let sequence = modified.get_sequence();
+        assert_eq!(sequence.len(), 2);
+        assert!(modified.is_modified(0));
+        assert!(!modified.is_modified(1));
+
+        // 元の操作列は変更されていないことを確認
+        assert_eq!(modified.original_sequence, original);
+    }
+
+    #[test]
+    fn test_multiple_modifiers() {
+        let original = vec![
+            MixedOperation::CornerSwap(CornerSwapOperation::new(0, 1, 0)),
+            MixedOperation::EdgeSwap(EdgeSwapOperation::new(8, 0, 0)),
+            MixedOperation::CornerSwap(CornerSwapOperation::new(0, 2, 0)),
+        ];
+
+        let mut modified = ModifiedMixedSequence::new(original);
+
+        // 複数の変更を追加
+        modified.add_modifier(MixedModifier::new(
+            0,
+            MixedOperation::CornerSwap(CornerSwapOperation::new(0, 3, 1)),
+        ));
+        modified.add_modifier(MixedModifier::new(
+            2,
+            MixedOperation::EdgeSwap(EdgeSwapOperation::new(8, 5, 1)),
+        ));
+
+        let sequence = modified.get_sequence();
+        assert_eq!(sequence.len(), 3);
+        assert!(modified.is_modified(0));
+        assert!(!modified.is_modified(1));
+        assert!(modified.is_modified(2));
+    }
+
+    #[test]
+    fn test_display_formatting() {
+        let original = vec![
+            MixedOperation::CornerSwap(CornerSwapOperation::new(0, 1, 0)),
+            MixedOperation::EdgeSwap(EdgeSwapOperation::new(8, 0, 0)),
+        ];
+
+        let mut modified = ModifiedMixedSequence::new(original);
+        modified.add_modifier(MixedModifier::new(
+            1,
+            MixedOperation::EdgeSwap(EdgeSwapOperation::new(8, 2, 1)),
+        ));
+
+        let display = format!("{}", modified);
+        println!("{}", display);
+
+        // **で囲まれていることを確認
+        assert!(display.contains("**"));
+        assert!(display.contains("Step 1:"));
+        assert!(display.contains("Step 2:"));
     }
 }

@@ -32,26 +32,14 @@ impl NearbyEdgeOperationSearch {
 
         // 各ステップについて
         for step_index in 0..self.base_operations.len() {
-            // Flip の場合はスキップ
-            if matches!(self.base_operations[step_index], EdgeOperation::Flip(_)) {
-                continue;
-            }
+            let alternatives = self.get_alternative_operations(&self.base_operations[step_index]);
 
-            // Swap の場合、全ての代替操作を生成
-            let alternatives = self.generate_alternatives();
-
-            for alt_swap in alternatives {
-                // ModifiedEdgeSequenceを作成
+            for alternative in alternatives {
                 let mut modified = ModifiedEdgeSequence::new(self.base_operations.clone());
-                modified.add_modifier(EdgeModifier::Swap(EdgeSwapModifier {
-                    step: step_index,
-                    modifier: alt_swap,
-                }));
+                let modifier = self.create_modifier(step_index, &alternative);
+                modified.add_modifier(modifier);
 
-                // 変更後の操作列を取得
                 let operations = modified.get_sequence();
-
-                // 変更後の操作列を初期状態に適用
                 let final_state = self.apply_operations(initial_state, &operations);
 
                 variants.push((modified, final_state));
@@ -61,22 +49,37 @@ impl NearbyEdgeOperationSearch {
         variants
     }
 
-    /// 全ての代替Swap操作を生成
-    ///
-    /// target1=8 (buffer) 固定で、target2=0..11, orientation=0..1 の全組み合わせ
-    fn generate_alternatives(&self) -> Vec<EdgeSwapOperation> {
-        self.generate_swap_alternatives()
+    /// 指定した操作に対する代替案を生成
+    fn get_alternative_operations(&self, operation: &EdgeOperation) -> Vec<EdgeOperation> {
+        match operation {
+            EdgeOperation::Swap(original_op) => self
+                .generate_swap_alternatives(original_op)
+                .into_iter()
+                .map(EdgeOperation::Swap)
+                .collect(),
+            EdgeOperation::Flip(original_op) => self
+                .generate_flip_alternatives(original_op)
+                .into_iter()
+                .map(EdgeOperation::Flip)
+                .collect(),
+        }
     }
 
     /// Swapの代替候補を生成
     ///
-    /// target1(BUFFER_PIECE) 固定で、target2=0..11, orientation=0..1 の全組み合わせ（24パターン）
-    fn generate_swap_alternatives(&self) -> Vec<EdgeSwapOperation> {
+    /// target1(BUFFER_PIECE) 固定で、target2=0..11, orientation=0..1 の全組み合わせから元の操作を除外
+    fn generate_swap_alternatives(
+        &self,
+        original: &EdgeSwapOperation,
+    ) -> Vec<EdgeSwapOperation> {
         let mut alternatives = Vec::new();
 
         for target2 in 0..12 {
             for orientation in 0..2 {
-                alternatives.push(EdgeSwapOperation::new(BUFFER_PIECE, target2, orientation));
+                let candidate = EdgeSwapOperation::new(BUFFER_PIECE, target2, orientation);
+                if candidate != *original {
+                    alternatives.push(candidate);
+                }
             }
         }
 
@@ -85,15 +88,35 @@ impl NearbyEdgeOperationSearch {
 
     /// Flipの代替候補を生成
     ///
-    /// target=0..11の全組み合わせ（12パターン）
-    fn generate_flip_alternatives(&self) -> Vec<EdgeFlipOperation> {
+    /// target=0..11の全組み合わせから元の操作を除外
+    fn generate_flip_alternatives(
+        &self,
+        original: &EdgeFlipOperation,
+    ) -> Vec<EdgeFlipOperation> {
         let mut alternatives = Vec::new();
 
         for target in 0..12 {
-            alternatives.push(EdgeFlipOperation::new(target));
+            let candidate = EdgeFlipOperation::new(target);
+            if candidate != *original {
+                alternatives.push(candidate);
+            }
         }
 
         alternatives
+    }
+
+    /// EdgeOperationからEdgeModifierを作成
+    fn create_modifier(&self, step: usize, operation: &EdgeOperation) -> EdgeModifier {
+        match operation {
+            EdgeOperation::Swap(op) => EdgeModifier::Swap(EdgeSwapModifier {
+                step,
+                modifier: op.clone(),
+            }),
+            EdgeOperation::Flip(op) => EdgeModifier::Flip(EdgeFlipModifier {
+                step,
+                modifier: op.clone(),
+            }),
+        }
     }
 
     /// 操作列を状態に順次適用
@@ -126,11 +149,7 @@ impl NearbyEdgeOperationSearch {
     /// # 注意
     /// - 2つの異なるステップを選択します（同じステップを2回変更することはありません）
     /// - Swap操作はSwapの代替候補に、Flip操作はFlipの代替候補に置き換えられます
-    /// - 生成されるバリエーション数:
-    ///   - Swap × Swap: C(s, 2) × 24 × 24
-    ///   - Swap × Flip: s × f × 24 × 12
-    ///   - Flip × Flip: C(f, 2) × 12 × 12
-    ///   (s = Swap操作の数, f = Flip操作の数)
+    /// - 元の操作と同じ操作は代替候補から除外されます
     pub fn explore_variants_two_changes(
         &self,
         initial_state: &State,
@@ -138,64 +157,25 @@ impl NearbyEdgeOperationSearch {
         let mut variants = Vec::new();
         let n = self.base_operations.len();
 
+        // 各ステップの代替案を事前に生成
+        let alternatives_for_each_step: Vec<Vec<EdgeModifier>> = self
+            .base_operations
+            .iter()
+            .enumerate()
+            .map(|(step, op)| {
+                self.get_alternative_operations(op)
+                    .into_iter()
+                    .map(|alt_op| self.create_modifier(step, &alt_op))
+                    .collect()
+            })
+            .collect();
+
         // i < j となる全てのペアについて
         for i in 0..n {
             for j in (i + 1)..n {
-                // Step i の操作型を判断して代替候補を取得
-                let alternatives_i: Vec<EdgeModifier> = match &self.base_operations[i] {
-                    EdgeOperation::Swap(_) => {
-                        // Swapの代替候補（24パターン）
-                        self.generate_swap_alternatives()
-                            .into_iter()
-                            .map(|alt| {
-                                EdgeModifier::Swap(EdgeSwapModifier {
-                                    step: i,
-                                    modifier: alt,
-                                })
-                            })
-                            .collect()
-                    }
-                    EdgeOperation::Flip(_) => {
-                        // Flipの代替候補（12パターン）
-                        self.generate_flip_alternatives()
-                            .into_iter()
-                            .map(|alt| {
-                                EdgeModifier::Flip(EdgeFlipModifier {
-                                    step: i,
-                                    modifier: alt,
-                                })
-                            })
-                            .collect()
-                    }
-                };
-
-                // Step j の操作型を判断して代替候補を取得
-                let alternatives_j: Vec<EdgeModifier> = match &self.base_operations[j] {
-                    EdgeOperation::Swap(_) => self
-                        .generate_swap_alternatives()
-                        .into_iter()
-                        .map(|alt| {
-                            EdgeModifier::Swap(EdgeSwapModifier {
-                                step: j,
-                                modifier: alt,
-                            })
-                        })
-                        .collect(),
-                    EdgeOperation::Flip(_) => self
-                        .generate_flip_alternatives()
-                        .into_iter()
-                        .map(|alt| {
-                            EdgeModifier::Flip(EdgeFlipModifier {
-                                step: j,
-                                modifier: alt,
-                            })
-                        })
-                        .collect(),
-                };
-
                 // 全ての組み合わせを試す
-                for alt_i in &alternatives_i {
-                    for alt_j in &alternatives_j {
+                for alt_i in &alternatives_for_each_step[i] {
+                    for alt_j in &alternatives_for_each_step[j] {
                         let mut modified = ModifiedEdgeSequence::new(self.base_operations.clone());
                         modified.add_modifier(alt_i.clone());
                         modified.add_modifier(alt_j.clone());
@@ -246,20 +226,12 @@ mod tests {
 
         println!("\n=== Generated {} variants ===", variants.len());
 
-        // バリエーションの数を確認
-        // Swap操作の数 × 代替操作の数(12×2=24)
+        // バリエーションの数を確認（元の操作を除外するため23）
         let swap_count = original_solution
             .iter()
             .filter(|op| matches!(op, EdgeOperation::Swap(_)))
             .count();
-        assert_eq!(variants.len(), swap_count * 24);
-
-        // いくつかのバリエーションを表示（デバッグ用）
-        for (i, (modified, final_state)) in variants.iter().take(3).enumerate() {
-            println!("\n--- Variant {} ---", i + 1);
-            println!("{}", NearbyEdgeOperationSearch::format_variant(modified));
-            println!("Final state solved: {}", final_state.is_solved());
-        }
+        assert_eq!(variants.len(), swap_count * 23);
     }
 
     #[test]
@@ -279,11 +251,12 @@ mod tests {
             .iter()
             .all(|op| matches!(op, EdgeOperation::Flip(_))));
 
-        let searcher = NearbyEdgeOperationSearch::new(original_solution);
+        let searcher = NearbyEdgeOperationSearch::new(original_solution.clone());
         let variants = searcher.explore_variants(&state);
 
-        // Flip はスキップされるので、バリエーションは0個
-        assert_eq!(variants.len(), 0);
+        // Flip操作の数 × (代替操作の数 - 1) = Flip操作の数 × 11
+        let flip_count = original_solution.len();
+        assert_eq!(variants.len(), flip_count * 11);
     }
 
     #[test]
@@ -332,21 +305,24 @@ mod tests {
     }
 
     #[test]
-    fn test_alternatives_generation() {
-        let searcher = NearbyEdgeOperationSearch::new(vec![]);
-        let alternatives = searcher.generate_alternatives();
+    fn test_does_not_include_original_operation() {
+        let state = State::new(
+            [0, 1, 2, 3, 4, 5, 6, 7],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 2, 3, 4, 5, 6, 7, 9, 8, 10, 11],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
 
-        // 12 targets × 2 orientations = 24
-        assert_eq!(alternatives.len(), 24);
+        let original_solution = EdgeInspection::solve_edge_permutation_with_orientation(&state, false);
+        let searcher = NearbyEdgeOperationSearch::new(original_solution.clone());
+        let variants = searcher.explore_variants(&state);
 
-        // 全てのtarget1が8 (buffer)であることを確認
-        assert!(alternatives.iter().all(|alt| alt.target1 == 8));
+        // 元の操作列と完全に同じバリエーションが含まれていないことを確認
+        let original_found = variants.iter().any(|(modified, _)| {
+            modified.get_sequence() == original_solution
+        });
 
-        // target2が0..11の範囲であることを確認
-        assert!(alternatives.iter().all(|alt| alt.target2 < 12));
-
-        // orientationが0..1の範囲であることを確認
-        assert!(alternatives.iter().all(|alt| alt.orientation < 2));
+        assert!(!original_found, "元の操作列と同じバリエーションが含まれています");
     }
 
     #[test]
@@ -380,7 +356,7 @@ mod tests {
             variants.len()
         );
 
-        // バリエーションの数を確認
+        // バリエーションの数を確認（元の操作を除外するため23 × 23, 23 × 11, 11 × 11）
         let swap_count = original_solution
             .iter()
             .filter(|op| matches!(op, EdgeOperation::Swap(_)))
@@ -392,24 +368,17 @@ mod tests {
 
         // Swap × Swap + Swap × Flip + Flip × Flip
         let expected_count = if swap_count >= 2 {
-            (swap_count * (swap_count - 1) / 2) * 24 * 24
+            (swap_count * (swap_count - 1) / 2) * 23 * 23
         } else {
             0
-        } + swap_count * flip_count * 24 * 12
+        } + swap_count * flip_count * 23 * 11
             + if flip_count >= 2 {
-                (flip_count * (flip_count - 1) / 2) * 12 * 12
+                (flip_count * (flip_count - 1) / 2) * 11 * 11
             } else {
                 0
             };
 
         assert_eq!(variants.len(), expected_count);
-
-        // いくつかのバリエーションを表示（デバッグ用）
-        for (i, (modified, final_state)) in variants.iter().take(3).enumerate() {
-            println!("\n--- Variant {} ---", i + 1);
-            println!("{}", NearbyEdgeOperationSearch::format_variant(modified));
-            println!("Final state solved: {}", final_state.is_solved());
-        }
     }
 
     #[test]
@@ -460,19 +429,42 @@ mod tests {
     }
 
     #[test]
-    fn test_two_changes_edge_insufficient_swaps() {
-        // Swapが1つしかない場合
-        let operations = vec![
-            EdgeOperation::Swap(EdgeSwapOperation::new(8, 1, 0)),
+    fn test_two_changes_edge_flip_only() {
+        // Flipのみの操作列
+        let state = State::solved();
+
+        let original_solution = vec![
             EdgeOperation::Flip(EdgeFlipOperation::new(0)),
             EdgeOperation::Flip(EdgeFlipOperation::new(1)),
+            EdgeOperation::Flip(EdgeFlipOperation::new(2)),
         ];
 
-        let state = State::solved();
-        let searcher = NearbyEdgeOperationSearch::new(operations);
+        let searcher = NearbyEdgeOperationSearch::new(original_solution);
         let variants = searcher.explore_variants_two_changes(&state);
 
-        // Swapが2つ未満なのでバリエーションは0個
-        assert_eq!(variants.len(), 0);
+        // Flip × Flip: C(3, 2) × 11 × 11 = 3 × 121 = 363
+        assert_eq!(variants.len(), 363);
+    }
+
+    #[test]
+    fn test_two_changes_edge_mixed_comprehensive() {
+        // SwapとFlipが混在する複雑なケース
+        let state = State::solved();
+
+        let original_solution = vec![
+            EdgeOperation::Swap(EdgeSwapOperation::new(6, 0, 0)),
+            EdgeOperation::Swap(EdgeSwapOperation::new(6, 1, 0)),
+            EdgeOperation::Flip(EdgeFlipOperation::new(0)),
+            EdgeOperation::Flip(EdgeFlipOperation::new(3)),
+        ];
+
+        let searcher = NearbyEdgeOperationSearch::new(original_solution);
+        let variants = searcher.explore_variants_two_changes(&state);
+
+        // Swap × Swap: C(2, 2) × 23 × 23 = 1 × 529 = 529
+        // Swap × Flip: 2 × 2 × 23 × 11 = 1,012
+        // Flip × Flip: C(2, 2) × 11 × 11 = 1 × 121 = 121
+        // 合計: 1,662
+        assert_eq!(variants.len(), 1662);
     }
 }

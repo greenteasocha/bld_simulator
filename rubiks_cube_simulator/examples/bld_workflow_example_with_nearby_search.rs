@@ -116,7 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         for (i, (modified_seq, final_state)) in matching_variants.iter().enumerate()
                         {
                             println!("Match {}:", i + 1);
-                            println!("  Modifications: {}", modified_seq.get_description());
+                            // println!("  Modifications: {}", modified_seq.get_description());
                             println!("  Operations:");
                             println!("{}", modified_seq);
                             println!("  Final state verification:");
