@@ -1,13 +1,10 @@
+use super::bld_workflow::{BldSolution, BldWorkflow};
 use crate::cube::State;
 use crate::explorer::{
-    MixedOperation, 
-    NearbyMixedOperationSearch, 
-    ModifiedMixedSequence, 
-    AlternativeGenerator,
-    CornerSwapAlternativeGenerator, 
-    EdgeSwapAlternativeGenerator
+    AlternativeGenerator, CornerSwapAlternativeGenerator, CornerTwistAlternativeGenerator,
+    EdgeFlipAlternativeGenerator, EdgeSwapAlternativeGenerator, MixedOperation,
+    ModifiedMixedSequence, NearbyMixedOperationSearch,
 };
-use super::bld_workflow::{BldWorkflow, BldSolution};
 
 /// Mixed Nearby Search を使用したワークフロー
 pub struct MixedNearbySearchWorkflow {
@@ -41,7 +38,7 @@ impl MixedNearbySearchWorkflow {
             }
         }
 
-        // Corner 操作を追加  
+        // Corner 操作を追加
         for corner_op in &solution.corner_operations {
             match corner_op {
                 crate::inspection::CornerOperation::Swap(swap_op) => {
@@ -57,10 +54,11 @@ impl MixedNearbySearchWorkflow {
     }
 
     /// 指定した状態にたどり着く近傍操作列を探索
-    pub fn find_variants_reaching_target(&self, 
-        initial_state: &State, 
-        target_state: &State
-    ) -> Result<Vec<(ModifiedMixedSequence<MixedOperation>, State)>, String> {
+    pub fn find_variants_reaching_target(
+        &self,
+        initial_state: &State,
+        target_state: &State,
+    ) -> Result<Vec<(ModifiedMixedSequence, State)>, String> {
         // 1. 正しい操作列を取得
         let solution = self.get_correct_solution(initial_state)?;
         let mixed_operations = self.solution_to_mixed_operations(&solution);
@@ -70,7 +68,8 @@ impl MixedNearbySearchWorkflow {
             Box::new(CornerSwapAlternativeGenerator),
             Box::new(EdgeSwapAlternativeGenerator),
         ];
-        let search = NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
+        let search =
+            NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
         let variants = search.explore_variants_two_changes(initial_state);
 
         // 3. ターゲット状態に一致するものを探す
@@ -83,7 +82,10 @@ impl MixedNearbySearchWorkflow {
     }
 
     /// 全てのバリエーションを探索（最大2つの変更）
-    pub fn explore_all_variants(&self, initial_state: &State) -> Result<Vec<(ModifiedMixedSequence<MixedOperation>, State)>, String> {
+    pub fn explore_all_variants(
+        &self,
+        initial_state: &State,
+    ) -> Result<Vec<(ModifiedMixedSequence, State)>, String> {
         // 1. 正しい操作列を取得
         let solution = self.get_correct_solution(initial_state)?;
         let mixed_operations = self.solution_to_mixed_operations(&solution);
@@ -91,9 +93,12 @@ impl MixedNearbySearchWorkflow {
         // 2. 近傍探索を実行
         let generators: Vec<Box<dyn AlternativeGenerator<MixedOperation>>> = vec![
             Box::new(CornerSwapAlternativeGenerator),
+            Box::new(CornerTwistAlternativeGenerator),
             Box::new(EdgeSwapAlternativeGenerator),
+            Box::new(EdgeFlipAlternativeGenerator),
         ];
-        let search = NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
+        let search =
+            NearbyMixedOperationSearch::with_alternative_generators(mixed_operations, generators);
         let variants = search.explore_variants_two_changes(initial_state);
 
         Ok(variants)
@@ -116,7 +121,7 @@ mod tests {
             "UBR": { "UBL": "L' U' L U' L' U2 L" },
             "BUR": { "BUL": "U L' U L U' L' U2 L" }
         }"#;
-        
+
         let ufr_parity = r#"{
             "RDB": "R U R' U R U2 R'",
             "UBR": "R U R' U R U2 R'",
@@ -126,31 +131,37 @@ mod tests {
             "BUL": "U' L' U L U' L' U2 L",
             "LUB": "L' U2 L U L' U L"
         }"#;
-        
+
         let ufr_twist = r#"{
             "FUL": "R' D R D' R' D R U' R' D' R D R' D' R U"
         }"#;
-        
+
         let uf_expanded = r#"{
             "FR": { "DL": "R U R' F R F'" },
             "RU": { "BL": "U R U' R' U R U R'" }
         }"#;
-        
+
         let uf_flip = r#"{
             "UB": "R U R' U R U2 R'",
             "UR": "R U R' U R U2 R' U"
         }"#;
-        
-        let bld_workflow = BldWorkflow::new(&ufr_expanded, &ufr_parity, &ufr_twist, &uf_expanded, &uf_flip)
-            .expect("Failed to create test workflow");
-            
+
+        let bld_workflow = BldWorkflow::new(
+            &ufr_expanded,
+            &ufr_parity,
+            &ufr_twist,
+            &uf_expanded,
+            &uf_flip,
+        )
+        .expect("Failed to create test workflow");
+
         MixedNearbySearchWorkflow::new(bld_workflow)
     }
 
     #[test]
     fn test_correct_solution_conversion() {
         let workflow = create_test_workflow();
-        
+
         let state = State::new(
             [1, 0, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
@@ -173,10 +184,10 @@ mod tests {
         );
     }
 
-    #[test] 
+    #[test]
     fn test_variants_exploration() {
         let workflow = create_test_workflow();
-        
+
         let state = State::new(
             [1, 0, 2, 3, 4, 5, 6, 7],
             [0, 0, 0, 0, 0, 0, 0, 0],
@@ -185,16 +196,17 @@ mod tests {
         );
 
         let variants = workflow.explore_all_variants(&state).unwrap();
-        
+
         println!("Found {} variants", variants.len());
-        
+
         // 少なくともいくつかのバリエーションが見つかることを確認
         assert!(!variants.is_empty());
-        
+
         // 各バリエーションの状態を確認
         for (i, (modified_seq, final_state)) in variants.iter().take(5).enumerate() {
-            println!("Variant {}: {} -> {:?}", 
-                i + 1, 
+            println!(
+                "Variant {}: {} -> {:?}",
+                i + 1,
                 modified_seq.get_description(),
                 final_state
             );
