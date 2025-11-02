@@ -8,6 +8,8 @@ use ratatui::{
     Frame, Terminal,
 };
 use std::io;
+use crate::cube::State;
+use crate::display::{StateToDisplay, CubeNetWidget};
 
 /// Interactive state input editor for cube state components
 pub struct StateInputEditor {
@@ -217,7 +219,17 @@ impl StateInputEditor {
     }
 
     fn ui(&self, f: &mut Frame) {
-        let chunks = Layout::default()
+        // Split the screen into left (input) and right (cube display)
+        let main_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(60), // Left side for input
+                Constraint::Percentage(40), // Right side for cube display
+            ])
+            .split(f.area());
+
+        // Left side layout
+        let left_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(3), // Title
@@ -228,43 +240,43 @@ impl StateInputEditor {
                 Constraint::Length(3), // EO field
                 Constraint::Min(6),    // Instructions
             ])
-            .split(f.area());
+            .split(main_chunks[0]);
 
         // Title
         let title = Paragraph::new("Combined Nearby Search - Input Editor")
             .block(Block::default().borders(Borders::ALL))
             .style(Style::default().fg(Color::Cyan))
             .alignment(Alignment::Center);
-        f.render_widget(title, chunks[0]);
+        f.render_widget(title, left_chunks[0]);
 
         // Render scramble field
-        self.render_scramble_field(f, chunks[1]);
+        self.render_scramble_field(f, left_chunks[1]);
 
         // Render target state fields
         self.render_field(
             f,
-            chunks[2],
+            left_chunks[2],
             "Target CP (Corner Permutation)",
             &self.target_cp,
             StateField::Cp,
         );
         self.render_field(
             f,
-            chunks[3],
+            left_chunks[3],
             "Target CO (Corner Orientation)",
             &self.target_co,
             StateField::Co,
         );
         self.render_field(
             f,
-            chunks[4],
+            left_chunks[4],
             "Target EP (Edge Permutation)",
             &self.target_ep,
             StateField::Ep,
         );
         self.render_field(
             f,
-            chunks[5],
+            left_chunks[5],
             "Target EO (Edge Orientation)",
             &self.target_eo,
             StateField::Eo,
@@ -297,7 +309,19 @@ impl StateInputEditor {
                     .title("Instructions"),
             )
             .style(Style::default().fg(Color::Gray));
-        f.render_widget(instructions_widget, chunks[6]);
+        f.render_widget(instructions_widget, left_chunks[6]);
+
+        // Right side: Cube display
+        let state = State::from_arrays(
+            self.target_cp,
+            self.target_co,
+            self.target_ep,
+            self.target_eo,
+        );
+        let cube_display = StateToDisplay::convert(&state);
+        let cube_widget = CubeNetWidget::new(&cube_display)
+            .title("Target State Preview");
+        f.render_widget(cube_widget, main_chunks[1]);
     }
 
     fn render_scramble_field(&self, f: &mut Frame, area: ratatui::layout::Rect) {
