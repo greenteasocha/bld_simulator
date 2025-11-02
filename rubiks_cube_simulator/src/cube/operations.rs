@@ -1,4 +1,5 @@
 use super::state::State;
+use crate::parser::move_parser::NotationMove;
 use std::collections::HashMap;
 
 pub struct RubiksCube {
@@ -212,6 +213,16 @@ impl Default for RubiksCube {
     }
 }
 
+/// NotationMoveを状態に適用する
+pub fn apply_notation_move(state: &State, mv: &NotationMove) -> State {
+    let cube = RubiksCube::new();
+    let move_name = mv.to_string();
+    cube.apply_move(state, &move_name).unwrap_or_else(|| {
+        eprintln!("Warning: Unknown move '{}'", move_name);
+        state.clone()
+    })
+}
+
 // test
 #[cfg(test)]
 mod tests {
@@ -234,7 +245,7 @@ mod tests {
     #[test]
     fn test_rubiks_cube_scramble_a() {
         let cube = RubiksCube::new();
-        let scramble = "D2 F' U B D' F D L F' D2 F R2 D2 B2 L2 F U2 L2 F' L2";
+        let scramble = "D R U R' D' R U' R' U2 M' U2 M M' U2 M U2 U R' D R U' R' D'";
         println!("state: {:?}", cube.scramble_to_state(scramble));
     }
 }

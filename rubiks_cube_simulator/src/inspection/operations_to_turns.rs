@@ -626,7 +626,7 @@ mod tests {
         assert_eq!(collection.len(), 2);
         assert!(!collection.is_empty());
 
-        let mut collection2 = MoveSequenceCollection::from_single(seq3);
+        let collection2 = MoveSequenceCollection::from_single(seq3);
         collection.extend(collection2);
 
         assert_eq!(collection.len(), 3);
