@@ -13,9 +13,9 @@ impl SameGroupAlternativeGenerator {
         Self
     }
 
-    /// NotationMoveが属するグループの全ての候補を返す
+    /// NotationMoveが属するグループの全ての候補を返す（Noopを含む）
     fn get_group_alternatives(&self, mv: &NotationMove) -> Vec<NotationMove> {
-        match mv {
+        let mut alternatives = match mv {
             NotationMove::U | NotationMove::U2 | NotationMove::UPrime 
             | NotationMove::UWide | NotationMove::UWide2 | NotationMove::UWidePrime => {
                 vec![
@@ -103,7 +103,20 @@ impl SameGroupAlternativeGenerator {
                     NotationMove::E2,
                 ]
             }
+            NotationMove::Noop => {
+                // Noopからの代替案は他の全てのムーブになる可能性があるが、
+                // 現実的には元のグループに基づくべき。
+                // ここではNoopのみを返す（実際にはNoopからの変更はあまり想定されない）
+                vec![NotationMove::Noop]
+            }
+        };
+        
+        // 全てのグループにNoopを追加
+        if !matches!(mv, NotationMove::Noop) {
+            alternatives.push(NotationMove::Noop);
         }
+        
+        alternatives
     }
 }
 
@@ -131,12 +144,13 @@ mod tests {
         let generator = SameGroupAlternativeGenerator::new();
         let alternatives = generator.generate_alternatives(&NotationMove::U);
         
-        assert_eq!(alternatives.len(), 5);
+        assert_eq!(alternatives.len(), 6); // 5 + Noop
         assert!(alternatives.contains(&NotationMove::UPrime));
         assert!(alternatives.contains(&NotationMove::U2));
         assert!(alternatives.contains(&NotationMove::UWide));
         assert!(alternatives.contains(&NotationMove::UWidePrime));
         assert!(alternatives.contains(&NotationMove::UWide2));
+        assert!(alternatives.contains(&NotationMove::Noop));
         assert!(!alternatives.contains(&NotationMove::U)); // 元のムーブは含まれない
     }
 
@@ -145,9 +159,10 @@ mod tests {
         let generator = SameGroupAlternativeGenerator::new();
         let alternatives = generator.generate_alternatives(&NotationMove::U2);
         
-        assert_eq!(alternatives.len(), 5);
+        assert_eq!(alternatives.len(), 6); // 5 + Noop
         assert!(alternatives.contains(&NotationMove::U));
         assert!(alternatives.contains(&NotationMove::UPrime));
+        assert!(alternatives.contains(&NotationMove::Noop));
         assert!(!alternatives.contains(&NotationMove::U2)); // 元のムーブは含まれない
     }
 
@@ -156,9 +171,10 @@ mod tests {
         let generator = SameGroupAlternativeGenerator::new();
         let alternatives = generator.generate_alternatives(&NotationMove::M);
         
-        assert_eq!(alternatives.len(), 2);
+        assert_eq!(alternatives.len(), 3); // 2 + Noop
         assert!(alternatives.contains(&NotationMove::MPrime));
         assert!(alternatives.contains(&NotationMove::M2));
+        assert!(alternatives.contains(&NotationMove::Noop));
         assert!(!alternatives.contains(&NotationMove::M));
     }
 
@@ -182,6 +198,16 @@ mod tests {
         for mv in test_moves {
             let alternatives = generator.generate_alternatives(&mv);
             assert!(!alternatives.is_empty(), "Move {:?} should have alternatives", mv);
+            assert!(alternatives.contains(&NotationMove::Noop), "Move {:?} should have Noop as alternative", mv);
         }
+    }
+
+    #[test]
+    fn test_noop_alternatives() {
+        let generator = SameGroupAlternativeGenerator::new();
+        let alternatives = generator.generate_alternatives(&NotationMove::Noop);
+        
+        // Noopから他への変更は想定していないので、空になる
+        assert_eq!(alternatives.len(), 0);
     }
 }

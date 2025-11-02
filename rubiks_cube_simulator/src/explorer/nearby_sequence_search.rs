@@ -21,19 +21,9 @@ impl NearbySequenceSearch {
         }
     }
 
-    /// 指定したNotationMoveに対する代替案を生成（NOOPを含む）
-    fn get_alternative_moves(&self, mv: &NotationMove) -> Vec<Option<NotationMove>> {
-        let mut alternatives: Vec<Option<NotationMove>> = self
-            .alternative_generator
-            .generate_alternatives(mv)
-            .into_iter()
-            .map(Some)
-            .collect();
-        
-        // NOOPを追加
-        alternatives.push(None);
-        
-        alternatives
+    /// 指定したNotationMoveに対する代替案を生成（Noopを含む）
+    fn get_alternative_moves(&self, mv: &NotationMove) -> Vec<NotationMove> {
+        self.alternative_generator.generate_alternatives(mv)
     }
 
     /// 元のSequenceから最大1つのNotationMoveを変更したバリエーションを生成
@@ -80,10 +70,10 @@ mod tests {
         let initial_state = State::solved();
         let variants = search.explore_variants_one_change(&initial_state);
 
-        // 各ステップについて、代替案の数 + NOOP = 6 (R系) + 6 (U系) + 6 (R系) = 18
-        // R: 5 alternatives + 1 NOOP = 6
-        // U: 5 alternatives + 1 NOOP = 6
-        // R': 5 alternatives + 1 NOOP = 6
+        // 各ステップについて、代替案の数
+        // R: 5 alternatives + 1 Noop = 6
+        // U: 5 alternatives + 1 Noop = 6
+        // R': 5 alternatives + 1 Noop = 6
         assert_eq!(variants.len(), 18);
     }
 
@@ -97,10 +87,10 @@ mod tests {
         let initial_state = State::solved();
         let variants = search.explore_variants_one_change(&initial_state);
 
-        // U: 5 alternatives + 1 NOOP = 6
+        // U: 5 alternatives + 1 Noop = 6
         assert_eq!(variants.len(), 6);
 
-        // NOOPを含むバリエーションが存在することを確認
+        // Noopを含むバリエーションが存在することを確認
         let has_noop = variants.iter().any(|(modified, _)| {
             let seq = modified.get_sequence();
             seq.is_empty()
@@ -122,8 +112,7 @@ mod tests {
         for (modified, final_state) in &variants {
             let seq = modified.get_sequence();
             if !seq.is_empty() {
-                // NOOPでない限り、状態は変化するはず
-                // ただし、U2を2回やると戻るなどの例外もあるため、ここでは厳密にチェックしない
+                // Noopでない限り、状態は変化するはず
                 println!("Sequence: {:?}, Changed: {}", seq, final_state != &initial_state);
             }
         }

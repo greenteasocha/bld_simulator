@@ -7,13 +7,13 @@ use std::fmt;
 pub struct MoveModifier {
     /// 変更対象のステップ番号
     pub step: usize,
-    /// 新しいNotationMove（Noneの場合はNOOPを表す）
-    pub new_move: Option<NotationMove>,
+    /// 新しいNotationMove（Noopの場合も含む）
+    pub new_move: NotationMove,
 }
 
 impl MoveModifier {
     /// 新しいMoveModifierを作成
-    pub fn new(step: usize, new_move: Option<NotationMove>) -> Self {
+    pub fn new(step: usize, new_move: NotationMove) -> Self {
         Self { step, new_move }
     }
 
@@ -23,13 +23,13 @@ impl MoveModifier {
     }
 
     /// 変更後のNotationMoveを取得
-    pub fn notation_move(&self) -> Option<&NotationMove> {
-        self.new_move.as_ref()
+    pub fn notation_move(&self) -> &NotationMove {
+        &self.new_move
     }
 }
 
 /// 変更されたMoveSequence
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ModifiedMoveSequence {
     /// 元のSequence
     pub original_sequence: Sequence,
@@ -59,10 +59,11 @@ impl ModifiedMoveSequence {
             // この位置に変更があるか確認
             if let Some(modifier) = self.modifiers.iter().find(|m| m.step() == i) {
                 // 変更がある場合
-                if let Some(new_move) = modifier.notation_move() {
+                let new_move = modifier.notation_move();
+                if !matches!(new_move, NotationMove::Noop) {
                     result.push(new_move.clone());
                 }
-                // Noneの場合は何も追加しない（NOOP）
+                // Noopの場合は何も追加しない
             } else {
                 // 変更がない場合は元のムーブを追加
                 result.push(mv.clone());
@@ -111,14 +112,22 @@ impl fmt::Display for ModifiedMoveSequence {
             if is_modified {
                 // 変更されたムーブを探す
                 if let Some(modifier) = self.modifiers.iter().find(|m| m.step() == i) {
-                    if let Some(new_move) = modifier.notation_move() {
+                    let new_move = modifier.notation_move();
+                    if matches!(new_move, NotationMove::Noop) {
+                        // Noopの場合は **** と表示
+                        if !first {
+                            write!(f, " ")?;
+                        }
+                        write!(f, "****")?;
+                        first = false;
+                    } else {
+                        // 通常の変更
                         if !first {
                             write!(f, " ")?;
                         }
                         write!(f, "**{}**", new_move.to_string())?;
                         first = false;
                     }
-                    // NOOPの場合は何も出力しない
                 }
             } else {
                 if !first {
@@ -139,18 +148,18 @@ mod tests {
 
     #[test]
     fn test_move_modifier_basic() {
-        let modifier = MoveModifier::new(0, Some(NotationMove::U));
+        let modifier = MoveModifier::new(0, NotationMove::U);
         
         assert_eq!(modifier.step(), 0);
-        assert_eq!(modifier.notation_move(), Some(&NotationMove::U));
+        assert_eq!(modifier.notation_move(), &NotationMove::U);
     }
 
     #[test]
     fn test_move_modifier_noop() {
-        let modifier = MoveModifier::new(0, None);
+        let modifier = MoveModifier::new(0, NotationMove::Noop);
         
         assert_eq!(modifier.step(), 0);
-        assert_eq!(modifier.notation_move(), None);
+        assert_eq!(modifier.notation_move(), &NotationMove::Noop);
     }
 
     #[test]
@@ -164,7 +173,7 @@ mod tests {
         let mut modified = ModifiedMoveSequence::new(original.clone());
 
         // 変更を追加
-        modified.add_modifier(MoveModifier::new(0, Some(NotationMove::R2)));
+        modified.add_modifier(MoveModifier::new(0, NotationMove::R2));
 
         // 変更が反映されているか確認
         let sequence = modified.get_sequence();
@@ -188,8 +197,8 @@ mod tests {
 
         let mut modified = ModifiedMoveSequence::new(original);
 
-        // NOOPを追加（Noneを指定）
-        modified.add_modifier(MoveModifier::new(1, None));
+        // Noopを追加
+        modified.add_modifier(MoveModifier::new(1, NotationMove::Noop));
 
         let sequence = modified.get_sequence();
         assert_eq!(sequence.len(), 2); // Uが削除される
@@ -207,7 +216,7 @@ mod tests {
         ];
 
         let mut modified = ModifiedMoveSequence::new(original);
-        modified.add_modifier(MoveModifier::new(0, Some(NotationMove::R2)));
+        modified.add_modifier(MoveModifier::new(0, NotationMove::R2));
 
         let display = format!("{}", modified);
         println!("Display output: {}", display);
@@ -228,14 +237,15 @@ mod tests {
         ];
 
         let mut modified = ModifiedMoveSequence::new(original);
-        modified.add_modifier(MoveModifier::new(1, None)); // Uを削除
+        modified.add_modifier(MoveModifier::new(1, NotationMove::Noop)); // Uを削除
 
         let display = format!("{}", modified);
         println!("Display output: {}", display);
 
-        // Uは表示されない
-        assert!(!display.contains("U"));
+        // **** が表示される
+        assert!(display.contains("****"));
         assert!(display.contains("R"));
         assert!(display.contains("R'"));
+        // Uは文字としては表示されない（****で置き換えられる）
     }
 }

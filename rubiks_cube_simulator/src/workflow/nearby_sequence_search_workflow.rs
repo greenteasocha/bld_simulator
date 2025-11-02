@@ -213,43 +213,6 @@ mod tests {
 
         let results = workflow.find_alternatives(&before_state, &after_state);
 
-        // // 結果を表示
-        // println!("Found {} alternatives", results.len());
-        // for (seq_idx, modified) in &results {
-        //     println!("Sequence #{}: {}", seq_idx + 1, modified);
-        // }
-
-        // // 少なくとも1つは見つかるはず
-        // assert!(!results.is_empty());
-
-        // // R2 U R' D R U' R D' が含まれているか確認
-        // let target_found = results.iter().any(|(_, modified)| {
-        //     let seq = modified.get_sequence();
-        //     seq.len() == 8
-        //         && seq[0] == NotationMove::MPrime
-        //         && seq[1] == NotationMove::U2
-        //         && seq[2] == NotationMove::M
-        //         && seq[3] == NotationMove::U2
-        //         && seq[4] == NotationMove::R2
-        //         && seq[5] == NotationMove::U
-        //         && seq[6] == NotationMove::RPrime
-        //         && seq[7] == NotationMove::D
-        //         && seq[8] == NotationMove::R
-        //         && seq[9] == NotationMove::UPrime
-        //         && seq[10] == NotationMove::RPrime
-        //         && seq[11] == NotationMove::DPrime
-        // });
-
-        // assert!(
-        //     target_found,
-        //     "Target sequence R2 U R' D R U' R D' not found"
-        // );
-
-        // let sequences = vec![original_sequence];
-        // let workflow = NearbySequenceSearchWorkflow::new(sequences);
-
-        // let results = workflow.find_alternatives_with_details(&before_state, &after_state);
-
         println!("Found {} alternatives with details", results.len());
         for result in &results {
             println!("{}", result);

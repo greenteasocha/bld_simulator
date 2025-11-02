@@ -46,12 +46,15 @@ pub enum NotationMove {
     E,
     E2,
     EPrime,
+    /// NOOP（何もしない操作、空文字列""に相当）
+    Noop,
 }
 
 impl NotationMove {
     /// 文字列からNotationMoveをパース
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
+            "" => Ok(NotationMove::Noop),
             "U" => Ok(NotationMove::U),
             "U2" => Ok(NotationMove::U2),
             "U2'" => Ok(NotationMove::U2),
@@ -119,6 +122,7 @@ impl NotationMove {
     /// NotationMoveを文字列に変換
     pub fn to_string(&self) -> String {
         match self {
+            NotationMove::Noop => "".to_string(),
             NotationMove::U => "U".to_string(),
             NotationMove::U2 => "U2".to_string(),
             NotationMove::UPrime => "U'".to_string(),
@@ -170,6 +174,7 @@ impl NotationMove {
     /// NotationMoveの逆操作を返す
     pub fn reversed(&self) -> Self {
         match self {
+            NotationMove::Noop => NotationMove::Noop,
             NotationMove::U => NotationMove::UPrime,
             NotationMove::UPrime => NotationMove::U,
             NotationMove::U2 => NotationMove::U2,
@@ -221,6 +226,7 @@ impl NotationMove {
     /// NotationMoveを2倍にする（180度回転にする）
     pub fn doubled(&self) -> Self {
         match self {
+            NotationMove::Noop => NotationMove::Noop,
             NotationMove::U | NotationMove::UPrime => NotationMove::U2,
             NotationMove::UWide | NotationMove::UWidePrime => NotationMove::UWide2,
             NotationMove::D | NotationMove::DPrime => NotationMove::D2,

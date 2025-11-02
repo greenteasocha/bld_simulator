@@ -215,6 +215,11 @@ impl Default for RubiksCube {
 
 /// NotationMoveを状態に適用する
 pub fn apply_notation_move(state: &State, mv: &NotationMove) -> State {
+    // Noopの場合は何もしない
+    if matches!(mv, NotationMove::Noop) {
+        return state.clone();
+    }
+    
     let cube = RubiksCube::new();
     let move_name = mv.to_string();
     cube.apply_move(state, &move_name).unwrap_or_else(|| {
