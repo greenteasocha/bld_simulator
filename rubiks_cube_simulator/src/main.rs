@@ -142,10 +142,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                         KeyCode::Char('i') => {
                             // Enter state input mode
                             let mut editor = StateInputEditor::new();
-                            if let Ok(Some((cp, co, ep, eo))) = editor.run(terminal) {
+                            if let Ok(Some((scramble, cp, co, ep, eo))) = editor.run(terminal) {
                                 // Create state from input
                                 app.current_state = State::from_arrays(cp, co, ep, eo);
-                                app.status_message = format!("State set: cp={:?}, co={:?}, ep={:?}, eo={:?}", cp, co, ep, eo);
+                                app.status_message = format!("State set from {}: cp={:?}, co={:?}, ep={:?}, eo={:?}", scramble, cp, co, ep, eo);
                             } else {
                                 app.status_message = "State input cancelled.".to_string();
                             }

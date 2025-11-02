@@ -5,6 +5,7 @@ use crate::inspection::{MoveSequenceCollection, OperationsToTurns};
 /// BLD (Blindfolded) solving workflow
 ///
 /// Corner と Edge の解析を統合し、ルービックキューブを解くための操作列を生成します。
+#[derive(Clone)]
 pub struct BldWorkflow {
     operations_converter: OperationsToTurns,
 }
@@ -20,6 +21,13 @@ pub struct BldSolution {
     pub all_operations: AllOperations,
     /// Move Sequence Collection (Edge → Corner の順)
     pub move_sequences: MoveSequenceCollection,
+}
+
+impl BldSolution {
+    /// Move Sequence Collection を取得
+    pub fn move_sequence_collection(&self) -> &MoveSequenceCollection {
+        &self.move_sequences
+    }
 }
 
 /// Corner と Edge の操作を統合した列挙型

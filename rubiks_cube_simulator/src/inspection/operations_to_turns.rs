@@ -243,6 +243,7 @@ fn load_json_to_map(json_str: &str) -> Result<HashMap<String, HashMap<String, St
 }
 
 /// コーナーとエッジ操作列を手順列に変換する
+#[derive(Clone)]
 pub struct OperationsToTurns {
     // Corner data
     ufr_expanded: HashMap<String, HashMap<String, String>>,

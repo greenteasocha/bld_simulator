@@ -1,4 +1,5 @@
-use rubiks_cube_simulator::{StateInputEditor, State};
+use rubiks_cube_simulator::{State, StateInputEditor};
+use rubiks_cube_simulator::workflow::CombinedNearbySearchWorkflow;
 use ratatui::{
     backend::CrosstermBackend,
     crossterm::{
@@ -7,7 +8,7 @@ use ratatui::{
     },
     Terminal,
 };
-use std::io;
+use std::{fs, io};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Enable TUI mode
@@ -23,37 +24,61 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Disable TUI mode
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
-    // Display the results
+    // Process the results
     match result {
-        Ok(Some((cp, co, ep, eo))) => {
-            println!("\n✅ State input completed successfully!");
-            println!("CP (Corner Permutation): {:?}", cp);
-            println!("CO (Corner Orientation): {:?}", co);
-            println!("EP (Edge Permutation):   {:?}", ep);
-            println!("EO (Edge Orientation):   {:?}", eo);
-            
-            // Create a State object from the input
-            let state = State::from_arrays(cp, co, ep, eo);
-            println!("\nCreated State:");
-            println!("{}", state);
-            
-            if state.is_solved() {
-                println!("\n🎉 The state is SOLVED!");
-            } else {
-                println!("\n🔀 The state is scrambled.");
+        Ok(Some((scramble, cp, co, ep, eo))) => {
+            println!("\n✅ Input completed successfully!\n");
+
+            // Check if scramble is provided
+            if scramble.trim().is_empty() {
+                println!("⚠️  No scramble provided. Exiting without search.");
+                return Ok(());
+            }
+
+            // Create target state
+            let target_state = State::from_arrays(cp, co, ep, eo);
+
+            // Load JSON resources
+            let ufr_expanded = fs::read_to_string("resources/ufr_expanded.json")?;
+            let ufr_parity = fs::read_to_string("resources/ufr_parity.json")?;
+            let ufr_twist = fs::read_to_string("resources/ufr_twist.json")?;
+            let uf_expanded = fs::read_to_string("resources/uf_expanded.json")?;
+            let uf_flip = fs::read_to_string("resources/uf_flip.json")?;
+
+            // Create workflow
+            let workflow = match CombinedNearbySearchWorkflow::from_json(
+                &ufr_expanded,
+                &ufr_parity,
+                &ufr_twist,
+                &uf_expanded,
+                &uf_flip,
+            ) {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("✗ Failed to create workflow: {}", e);
+                    return Ok(());
+                }
+            };
+
+            // Run search
+            match workflow.search_from_scramble(&scramble, &target_state) {
+                Ok(result) => {
+                    // Display detailed results using display_detailed
+                    println!("{}", result.display_detailed(5));
+                }
+                Err(e) => {
+                    eprintln!("✗ Search failed: {}", e);
+                }
             }
         }
         Ok(None) => {
-            println!("\n❌ State input was cancelled.");
+            println!("\n❌ Input was cancelled.");
         }
         Err(e) => {
-            println!("\n⚠️  Error occurred: {}", e);
+            eprintln!("\n⚠️  Error occurred: {}", e);
         }
     }
 

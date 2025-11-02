@@ -17,6 +17,13 @@ impl MixedNearbySearchWorkflow {
         Self { bld_workflow }
     }
 
+    /// BldWorkflow から直接作成（new のエイリアス）
+    pub fn new_from_bld_workflow(bld_workflow: &BldWorkflow) -> Self {
+        Self {
+            bld_workflow: bld_workflow.clone(),
+        }
+    }
+
     /// 正しい操作列を取得
     pub fn get_correct_solution(&self, state: &State) -> Result<BldSolution, String> {
         self.bld_workflow.solve(state)
