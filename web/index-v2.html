@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Solver - BLD WebUI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .example {
+            font-size: 0.85em;
+            color: #666;
+            font-style: italic;
+        }
+
+        .hint {
+            font-size: 0.85em;
+            color: #667eea;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .result-section {
+            margin-top: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .progress-indicator {
+            font-size: 0.9em;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .move-sequences-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .move-sequence-item {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .move-sequence-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .move-sequence-item.completed {
+            background: #f5f5f5;
+            border-left-color: #ccc;
+            opacity: 0.5;
+        }
+
+        .move-sequence-item.active {
+            background: #e8eaf6;
+            border-left-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .sequence-number {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #667eea;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+
+        .move-sequence-item.completed .sequence-number {
+            background: #ccc;
+        }
+
+        .move-sequence-item.completed .sequence-number::after {
+            content: '✓';
+        }
+
+        .sequence-description {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            margin-right: 36px;
+            font-size: 0.9em;
+        }
+
+        .move-sequence-item.completed .sequence-description {
+            color: #999;
+        }
+
+        .sequence-moves {
+            font-family: 'Courier New', monospace;
+            color: #333;
+            font-size: 1.1em;
+            line-height: 1.6;
+            word-break: break-all;
+            margin-right: 36px;
+        }
+
+        .move-sequence-item.completed .sequence-moves {
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            padding: 40px;
+        }
+
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .instruction {
+            text-align: center;
+            color: #667eea;
+            padding: 12px;
+            background: #e8eaf6;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Cross Solver</h1>
+        <p class="subtitle">BLD Solver</p>
+
+        <div class="input-section">
+            <label for="scramble">スクランブル入力</label>
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="scramble" 
+                    placeholder="例: R U R' U'"
+                    value="R U R' U'"
+                >
+                <button id="solveBtn">解く</button>
+            </div>
+            <div class="example">
+                例: R U R' U', R U2 R' D R U' R' D', F R U' R' U' R U R' F'
+            </div>
+            <div class="hint">
+                💡 Ctrl + Enter で解く | 解いた後 Enter で次の手順へ進む
+            </div>
+        </div>
+
+        <div id="result" class="result-section"></div>
+    </div>
+
+    <script type="module">
+        import init, { 
+            apply_scramble_to_state,
+            solve_bld_with_default_moveset_v2
+        } from '/pkg/bld_simulator.js';
+
+        let wasmInitialized = false;
+        let currentStep = 0;
+        let totalSteps = 0;
+        let isResultDisplayed = false;
+
+        function renderSolution(solution) {
+            const { move_sequences } = solution;
+            
+            if (move_sequences.length === 0) {
+                return '<div class="empty-state">✅ Already solved! No moves needed.</div>';
+            }
+
+            totalSteps = move_sequences.length;
+            currentStep = 0;
+
+            let html = '<div class="instruction">👉 Enter キーを押して次の手順に進む</div>';
+            html += '<div class="section-header">';
+            html += '<div class="section-title">Move Sequences</div>';
+            html += `<div class="progress-indicator">0 / ${totalSteps}</div>`;
+            html += '</div>';
+            html += '<div class="move-sequences-section">';
+            
+            move_sequences.forEach((seq, index) => {
+                const activeClass = index === 0 ? 'active' : '';
+                html += `
+                    <div class="move-sequence-item ${activeClass}" data-index="${index}">
+                        <div class="sequence-number">${index + 1}</div>
+                        ${seq.description ? `<div class="sequence-description">${seq.description}</div>` : ''}
+                        <div class="sequence-moves">${seq.sequence}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        function advanceStep() {
+            if (!isResultDisplayed || currentStep >= totalSteps) {
+                return;
+            }
+
+            const currentCard = document.querySelector('.move-sequence-item[data-index="' + currentStep + '"]');
+            if (currentCard) {
+                currentCard.classList.remove('active');
+                currentCard.classList.add('completed');
+            }
+
+            currentStep++;
+
+            if (currentStep < totalSteps) {
+                const nextCard = document.querySelector('.move-sequence-item[data-index="' + currentStep + '"]');
+                if (nextCard) {
+                    nextCard.classList.add('active');
+                    nextCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            const progressIndicator = document.querySelector('.progress-indicator');
+            if (progressIndicator) {
+                progressIndicator.textContent = currentStep + ' / ' + totalSteps;
+                
+                if (currentStep === totalSteps) {
+                    const instruction = document.querySelector('.instruction');
+                    if (instruction) {
+                        instruction.textContent = '🎉 すべての手順が完了しました！';
+                        instruction.style.background = '#e8f5e9';
+                        instruction.style.color = '#2e7d32';
+                    }
+                }
+            }
+        }
+
+        function resetSteps() {
+            currentStep = 0;
+            totalSteps = 0;
+            isResultDisplayed = false;
+        }
+
+        async function solveCube(scramble) {
+            const resultDiv = document.getElementById('result');
+            const solveBtn = document.getElementById('solveBtn');
+
+            try {
+                solveBtn.disabled = true;
+                resultDiv.innerHTML = '<div class="loading">🔄 計算中...</div>';
+                resetSteps();
+
+                if (!wasmInitialized) {
+                    await init();
+                    wasmInitialized = true;
+                }
+
+                const scrambledState = apply_scramble_to_state(scramble);
+
+                if (!scrambledState.success) {
+                    throw new Error(scrambledState.error || 'スクランブルの適用に失敗しました');
+                }
+
+                const { cp, co, ep, eo } = scrambledState.state;
+                const cpArray = new Uint8Array(cp);
+                const coArray = new Uint8Array(co);
+                const epArray = new Uint8Array(ep);
+                const eoArray = new Uint8Array(eo);
+
+                const result = solve_bld_with_default_moveset_v2(
+                    cpArray,
+                    coArray,
+                    epArray,
+                    eoArray
+                );
+
+                if (!result.success) {
+                    throw new Error(result.error || '解法の計算に失敗しました');
+                }
+
+                resultDiv.innerHTML = renderSolution(result.solution);
+                isResultDisplayed = true;
+
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">❌ エラー: ' + error.message + '</div>';
+                resetSteps();
+            } finally {
+                solveBtn.disabled = false;
+            }
+        }
+
+        document.getElementById('solveBtn').addEventListener('click', () => {
+            const scramble = document.getElementById('scramble').value.trim();
+            if (scramble) {
+                solveCube(scramble);
+            } else {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ スクランブルを入力してください</div>';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('solveBtn').click();
+            }
+            else if (e.key === 'Enter' && !e.ctrlKey) {
+                e.preventDefault();
+                advanceStep();
+            }
+        });
+
+        window.addEventListener('load', async () => {
+            try {
+                await init();
+                wasmInitialized = true;
+                console.log('✅ WASM initialized successfully');
+            } catch (error) {
+                console.error('❌ WASM initialization failed:', error);
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ 初期化エラー: ' + error.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html>
