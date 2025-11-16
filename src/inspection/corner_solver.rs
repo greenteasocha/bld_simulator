@@ -1,10 +1,11 @@
 use crate::cube::State;
+use serde::{Deserialize, Serialize};
 
 const BUFFER_PIECE: usize = 2;
 const NEW_LOOP_PRIORITY: [usize; 7] = [1, 3, 0, 4, 5, 6, 7];
 
 /// コーナーの2点交換操作を表す（co考慮版）
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CornerSwapOperation {
     /// 交換する2つのインデックス
     pub target1: usize,
@@ -62,7 +63,7 @@ impl std::fmt::Display for CornerSwapOperation {
 }
 
 /// コーナーの向き変更操作を表す
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CornerTwistOperation {
     /// 対象のインデックス
     pub target: usize,
@@ -105,7 +106,8 @@ impl std::fmt::Display for CornerTwistOperation {
 }
 
 /// 操作の種類
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operation_type", content = "data")]
 pub enum CornerOperation {
     Swap(CornerSwapOperation),
     Twist(CornerTwistOperation),

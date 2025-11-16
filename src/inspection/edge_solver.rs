@@ -1,10 +1,11 @@
 use crate::cube::State;
+use serde::{Deserialize, Serialize};
 
 const BUFFER_PIECE: usize = 6;
 const NEW_LOOP_PRIORITY: [usize; 11] = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11];
 
 /// エッジの2点交換操作を表す（eo考慮版）
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EdgeSwapOperation {
     /// 交換する2つのインデックス
     pub target1: usize,
@@ -68,7 +69,7 @@ impl std::fmt::Display for EdgeSwapOperation {
 }
 
 /// エッジの向き変更操作を表す
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EdgeFlipOperation {
     /// 対象のインデックス
     pub target: usize,
@@ -107,7 +108,8 @@ impl std::fmt::Display for EdgeFlipOperation {
 }
 
 /// 操作の種類
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "operation_type", content = "data")]
 pub enum EdgeOperation {
     Swap(EdgeSwapOperation),
     Flip(EdgeFlipOperation),
