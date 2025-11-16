@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && node dist/index.js",
+    "serve": "node serve.js",
+    "serve:3000": "node serve.js 3000"
   },
   "dependencies": {
     "@types/node": "^20.0.0",

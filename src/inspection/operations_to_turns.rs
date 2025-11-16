@@ -1,4 +1,7 @@
-use super::{CornerOperation, CornerSwapOperation, CornerTwistOperation, EdgeOperation, EdgeSwapOperation, EdgeFlipOperation};
+use super::{
+    CornerOperation, CornerSwapOperation, CornerTwistOperation, EdgeFlipOperation, EdgeOperation,
+    EdgeSwapOperation,
+};
 use crate::parser::{parse_sequence, Sequence};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -127,20 +130,20 @@ impl Default for MoveSequenceCollection {
 impl std::fmt::Display for MoveSequenceCollection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use crate::parser::sequence_to_string;
-        
+
         for (i, seq) in self.sequences.iter().enumerate() {
             if i > 0 {
                 writeln!(f)?;
             }
-            
+
             // descriptionがある場合は表示
             if !seq.description.is_empty() {
                 write!(f, "// {}\n", seq.description)?;
             }
-            
+
             write!(f, "{}", sequence_to_string(&seq.moves))?;
         }
-        
+
         Ok(())
     }
 }
@@ -277,6 +280,13 @@ impl OperationsToTurns {
         let uf_flip: HashMap<String, String> = serde_json::from_str(uf_flip_json)
             .map_err(|e| format!("Failed to parse uf_flip: {}", e))?;
 
+        // print uft_paruity for debug
+        // println!("ufr_parity: {:?}", ufr_parity);
+        // println!("ufr_twist: {:?}", ufr_twist);
+        // println!("ufr_expanded: {:?}", ufr_expanded);
+        // println!("uf_expanded: {:?}", uf_expanded);
+        // println!("uf_flip: {:?}", uf_flip);
+
         Ok(Self {
             ufr_expanded,
             ufr_parity,
@@ -287,7 +297,10 @@ impl OperationsToTurns {
     }
 
     /// CornerOperation列を MoveSequenceCollection に変換
-    pub fn convert(&self, operations: &[CornerOperation]) -> Result<MoveSequenceCollection, String> {
+    pub fn convert(
+        &self,
+        operations: &[CornerOperation],
+    ) -> Result<MoveSequenceCollection, String> {
         let sequences = self.convert_to_vec(operations)?;
         Ok(MoveSequenceCollection::from_vec(sequences))
     }
@@ -334,7 +347,7 @@ impl OperationsToTurns {
     }
 
     /// 連続する2つのSwapを変換
-    /// 
+    ///
     /// # 前提条件
     /// - swap1.target1 と swap2.target1 は両方とも BUFFER_PIECE (2 = UFR) であること
     /// - これは CornerInspection::solve_corner_permutation_with_orientation の
@@ -397,13 +410,19 @@ impl OperationsToTurns {
     }
 
     /// EdgeOperation列を MoveSequenceCollection に変換
-    pub fn convert_edge_operations(&self, operations: &[EdgeOperation]) -> Result<MoveSequenceCollection, String> {
+    pub fn convert_edge_operations(
+        &self,
+        operations: &[EdgeOperation],
+    ) -> Result<MoveSequenceCollection, String> {
         let sequences = self.convert_edge_to_vec(operations)?;
         Ok(MoveSequenceCollection::from_vec(sequences))
     }
 
     /// EdgeOperation列を MoveSequence の Vec に変換（内部用）
-    fn convert_edge_to_vec(&self, operations: &[EdgeOperation]) -> Result<Vec<MoveSequence>, String> {
+    fn convert_edge_to_vec(
+        &self,
+        operations: &[EdgeOperation],
+    ) -> Result<Vec<MoveSequence>, String> {
         let mut result = Vec::new();
         let mut i = 0;
 
@@ -437,7 +456,7 @@ impl OperationsToTurns {
     }
 
     /// 連続する2つのEdge Swapを変換
-    /// 
+    ///
     /// # 前提条件
     /// - swap1.target1 と swap2.target1 は両方とも BUFFER_PIECE (6 = UF) であること
     /// - これは EdgeInspection::solve_edge_permutation_with_orientation の
@@ -523,22 +542,23 @@ mod tests {
 
     #[test]
     fn test_convert_two_swaps() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "RDB"
         // Swap: UFR ↔ DFR (ori: 1) → target_sticker = "RDF"
         let swap1 = CornerSwapOperation::new(2, 5, 2); // UFR ↔ DBR (ori: 2)
         let swap2 = CornerSwapOperation::new(2, 6, 1); // UFR ↔ DFR (ori: 1)
 
-        let operations = vec![
-            CornerOperation::Swap(swap1),
-            CornerOperation::Swap(swap2),
-        ];
+        let operations = vec![CornerOperation::Swap(swap1), CornerOperation::Swap(swap2)];
 
-        let collection = converter
-            .convert(&operations)
-            .expect("Failed to convert");
+        let collection = converter.convert(&operations).expect("Failed to convert");
 
         assert_eq!(collection.len(), 1);
         let sequences = collection.sequences();
@@ -551,16 +571,20 @@ mod tests {
 
     #[test]
     fn test_convert_single_swap() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         // Swap: UFR ↔ DBR (ori: 2) → target_sticker = "RDB"
         let swap = CornerSwapOperation::new(2, 5, 2);
         let operations = vec![CornerOperation::Swap(swap)];
 
-        let collection = converter
-            .convert(&operations)
-            .expect("Failed to convert");
+        let collection = converter.convert(&operations).expect("Failed to convert");
 
         assert_eq!(collection.len(), 1);
         let sequences = collection.sequences();
@@ -569,16 +593,20 @@ mod tests {
 
     #[test]
     fn test_convert_twist() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         // Twist: UFL (counter-clockwise) → target=3, orientation=1 → "FUL"
         let twist = CornerTwistOperation::new(3, 1);
         let operations = vec![CornerOperation::Twist(twist)];
 
-        let collection = converter
-            .convert(&operations)
-            .expect("Failed to convert");
+        let collection = converter.convert(&operations).expect("Failed to convert");
 
         assert_eq!(collection.len(), 1);
         let sequences = collection.sequences();
@@ -591,8 +619,14 @@ mod tests {
 
     #[test]
     fn test_mixed_operations() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         let swap1 = CornerSwapOperation::new(2, 5, 2); // RDB
         let swap2 = CornerSwapOperation::new(2, 6, 1); // RDF
@@ -604,9 +638,7 @@ mod tests {
             CornerOperation::Twist(twist),
         ];
 
-        let collection = converter
-            .convert(&operations)
-            .expect("Failed to convert");
+        let collection = converter.convert(&operations).expect("Failed to convert");
 
         assert_eq!(collection.len(), 2);
         let sequences = collection.sequences();
@@ -653,18 +685,21 @@ mod tests {
 
     #[test]
     fn test_convert_two_edge_swaps() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         // Swap: UF ↔ FR (ori: 0) → target_sticker = "FR"
         // Swap: UF ↔ DL (ori: 0) → target_sticker = "DL"
         let swap1 = EdgeSwapOperation::new(6, 2, 0); // UF ↔ FR (ori: 0)
         let swap2 = EdgeSwapOperation::new(6, 11, 0); // UF ↔ DL (ori: 0)
 
-        let operations = vec![
-            EdgeOperation::Swap(swap1),
-            EdgeOperation::Swap(swap2),
-        ];
+        let operations = vec![EdgeOperation::Swap(swap1), EdgeOperation::Swap(swap2)];
 
         let collection = converter
             .convert_edge_operations(&operations)
@@ -673,16 +708,19 @@ mod tests {
         assert_eq!(collection.len(), 1);
         let sequences = collection.sequences();
         assert_eq!(sequences[0].description, "FR → DL");
-        assert_eq!(
-            sequences[0].moves,
-            parse_sequence("R U R' F R F'").unwrap()
-        );
+        assert_eq!(sequences[0].moves, parse_sequence("R U R' F R F'").unwrap());
     }
 
     #[test]
     fn test_convert_edge_flip() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         // Flip: UB → target=4 → "UB"
         let flip = EdgeFlipOperation::new(4);
@@ -703,8 +741,14 @@ mod tests {
 
     #[test]
     fn test_mixed_edge_operations() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         let swap1 = EdgeSwapOperation::new(6, 2, 0); // FR
         let swap2 = EdgeSwapOperation::new(6, 9, 0); // DR
@@ -728,8 +772,14 @@ mod tests {
 
     #[test]
     fn test_collection_display() {
-        let converter = OperationsToTurns::new(TEST_UFR_EXPANDED, TEST_UFR_PARITY, TEST_UFR_TWIST, TEST_UF_EXPANDED, TEST_UF_FLIP)
-            .expect("Failed to create converter");
+        let converter = OperationsToTurns::new(
+            TEST_UFR_EXPANDED,
+            TEST_UFR_PARITY,
+            TEST_UFR_TWIST,
+            TEST_UF_EXPANDED,
+            TEST_UF_FLIP,
+        )
+        .expect("Failed to create converter");
 
         let swap1 = CornerSwapOperation::new(2, 5, 2); // RDB
         let swap2 = CornerSwapOperation::new(2, 6, 1); // RDF
@@ -741,16 +791,14 @@ mod tests {
             CornerOperation::Twist(twist),
         ];
 
-        let collection = converter
-            .convert(&operations)
-            .expect("Failed to convert");
+        let collection = converter.convert(&operations).expect("Failed to convert");
 
         let display = format!("{}", collection);
         println!("\n=== Display Output ===\n{}", display);
 
         // 改行が含まれていることを確認
         assert!(display.contains('\n'));
-        
+
         // descriptionがコメントとして含まれていることを確認
         assert!(display.contains("// RDB → RDF"));
         assert!(display.contains("// Twist: FUL"));

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Solver - BLD WebUI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .example {
+            font-size: 0.85em;
+            color: #666;
+            font-style: italic;
+        }
+
+        .result-section {
+            margin-top: 30px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .result-box:empty::before {
+            content: '解法がここに表示されます...';
+            color: #999;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #2e7d32;
+        }
+
+        .section-header {
+            font-weight: 700;
+            color: #667eea;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .operation-item {
+            padding-left: 16px;
+            margin-bottom: 4px;
+        }
+
+        .move-sequence {
+            background: #e8eaf6;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+
+        .move-sequence-description {
+            font-weight: 600;
+            color: #5c6bc0;
+            margin-bottom: 4px;
+        }
+
+        .move-sequence-moves {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Cross Solver</h1>
+        <p class="subtitle">BLD (Blindfolded) WebAssembly Solver</p>
+
+        <div class="input-section">
+            <label for="scramble">スクランブル入力</label>
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="scramble" 
+                    placeholder="例: R U R' U'"
+                    value="R U R' U'"
+                >
+                <button id="solveBtn">解く</button>
+            </div>
+            <div class="example">
+                例: R U R' U', R U2 R' D R U' R' D', F R U' R' U' R U R' F'
+            </div>
+        </div>
+
+        <div class="result-section">
+            <div class="result-title">解法結果</div>
+            <div id="result" class="result-box"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { 
+            apply_scramble_to_state,
+            solve_bld_with_default_moveset 
+        } from '/pkg/bld_simulator.js';
+
+        let wasmInitialized = false;
+
+        // 結果をフォーマットする関数
+        function formatSolution(solution) {
+            let output = '';
+
+            // Corner Operations
+            output += '【Corner Operations】\n';
+            if (solution.corner_operations.length === 0) {
+                output += '  (なし)\n';
+            } else {
+                solution.corner_operations.forEach((op, i) => {
+                    output += `  ${i + 1}. ${op}\n`;
+                });
+            }
+            output += '\n';
+
+            // Edge Operations
+            output += '【Edge Operations】\n';
+            if (solution.edge_operations.length === 0) {
+                output += '  (なし)\n';
+            } else {
+                solution.edge_operations.forEach((op, i) => {
+                    output += `  ${i + 1}. ${op}\n`;
+                });
+            }
+            output += '\n';
+
+            // All Operations
+            output += '【All Operations (Edge → Corner)】\n';
+            if (solution.all_operations.length === 0) {
+                output += '  (なし)\n';
+            } else {
+                solution.all_operations.forEach((op, i) => {
+                    output += `  Step ${i + 1}: ${op}\n`;
+                });
+            }
+            output += '\n';
+
+            // Move Sequences
+            output += '【Move Sequences】\n';
+            if (solution.move_sequences.length === 0) {
+                output += '  (なし)\n';
+            } else {
+                solution.move_sequences.forEach((seq, i) => {
+                    if (seq.description) {
+                        output += `  // ${seq.description}\n`;
+                    }
+                    output += `  ${seq.sequence}\n`;
+                    if (i < solution.move_sequences.length - 1) {
+                        output += '\n';
+                    }
+                });
+            }
+
+            return output;
+        }
+
+        // 解法を計算する関数
+        async function solveCube(scramble) {
+            const resultDiv = document.getElementById('result');
+            const solveBtn = document.getElementById('solveBtn');
+
+            try {
+                // ボタンを無効化
+                solveBtn.disabled = true;
+                resultDiv.textContent = '計算中...';
+                resultDiv.className = 'result-box loading';
+
+                // WASMを初期化（まだの場合）
+                if (!wasmInitialized) {
+                    await init();
+                    wasmInitialized = true;
+                }
+
+                // スクランブルを適用して状態を取得
+                const scrambledState = apply_scramble_to_state(scramble);
+
+                if (!scrambledState.success) {
+                    throw new Error(scrambledState.error || 'スクランブルの適用に失敗しました');
+                }
+
+                // 状態を解く
+                const { cp, co, ep, eo } = scrambledState.state;
+                const cpArray = new Uint8Array(cp);
+                const coArray = new Uint8Array(co);
+                const epArray = new Uint8Array(ep);
+                const eoArray = new Uint8Array(eo);
+
+                const result = solve_bld_with_default_moveset(
+                    cpArray,
+                    coArray,
+                    epArray,
+                    eoArray
+                );
+
+                if (!result.success) {
+                    throw new Error(result.error || '解法の計算に失敗しました');
+                }
+
+                // 結果を表示
+                const formattedResult = formatSolution(result.solution);
+                resultDiv.textContent = formattedResult;
+                resultDiv.className = 'result-box success';
+
+            } catch (error) {
+                resultDiv.textContent = `❌ エラー: ${error.message}`;
+                resultDiv.className = 'result-box error';
+            } finally {
+                solveBtn.disabled = false;
+            }
+        }
+
+        // イベントリスナーの設定
+        document.getElementById('solveBtn').addEventListener('click', () => {
+            const scramble = document.getElementById('scramble').value.trim();
+            if (scramble) {
+                solveCube(scramble);
+            } else {
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = '❌ スクランブルを入力してください';
+                resultDiv.className = 'result-box error';
+            }
+        });
+
+        // Enterキーでも実行できるように
+        document.getElementById('scramble').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('solveBtn').click();
+            }
+        });
+
+        // ページ読み込み時にWASMを初期化
+        window.addEventListener('load', async () => {
+            try {
+                await init();
+                wasmInitialized = true;
+                console.log('✅ WASM initialized successfully');
+            } catch (error) {
+                console.error('❌ WASM initialization failed:', error);
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = `❌ 初期化エラー: ${error.message}`;
+                resultDiv.className = 'result-box error';
+            }
+        });
+    </script>
+</body>
+</html>

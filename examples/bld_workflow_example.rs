@@ -1,4 +1,4 @@
-use rubiks_cube_simulator::{BldWorkflow, State};
+use bld_simulator::{BldWorkflow, State};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

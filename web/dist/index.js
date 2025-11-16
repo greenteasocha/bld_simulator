@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 const wasmPath = join(__dirname, '../../pkg/bld_simulator_bg.wasm');
 const wasmBuffer = readFileSync(wasmPath);
 // Import WASM functions
-import initWasm, { parse_scramble, apply_scramble_to_state, solve_from_state, solve_bld_with_default_moveset, greet } from '../../pkg/bld_simulator.js';
+import initWasm, { parse_scramble, apply_scramble_to_state, solve_bld_with_default_moveset, greet } from '../../pkg/bld_simulator.js';
 async function main() {
     // Initialize WASM (use buffer directly for Node.js)
     await initWasm(wasmBuffer);
@@ -19,7 +19,7 @@ async function main() {
     console.log('');
     // Test 2: Parse scramble
     console.log('2. Testing parse_scramble:');
-    const scramble = "R U R' U'";
+    const scramble = "D2 F' U B D' F D L F' D2 F R2 D2 B2 L2 F U2 L2 F' L2";
     console.log(`Input: "${scramble}"`);
     const parsed = parse_scramble(scramble);
     console.log('Parsed result:', JSON.stringify(parsed, null, 2));
@@ -30,28 +30,27 @@ async function main() {
     const scrambledState = apply_scramble_to_state(scramble);
     console.log('Scrambled state:', JSON.stringify(scrambledState, null, 2));
     console.log('');
-    // Test 4: Solve from state
-    if (scrambledState.success && scrambledState.state) {
-        console.log('4. Testing solve_from_state:');
-        const { cp, co, ep, eo } = scrambledState.state;
-        // Convert arrays to Uint8Array for WASM
-        const cpArray = new Uint8Array(cp);
-        const coArray = new Uint8Array(co);
-        const epArray = new Uint8Array(ep);
-        const eoArray = new Uint8Array(eo);
-        console.log('Solving state...');
-        const solutions = solve_from_state(cpArray, coArray, epArray, eoArray);
-        console.log('Solutions:', JSON.stringify(solutions, null, 2));
-        if (solutions.success && solutions.solutions) {
-            console.log('\n✅ All solutions found:');
-            solutions.solutions.forEach((solution, index) => {
-                console.log(`  Solution ${index + 1}: ${solution}`);
-            });
-        }
-    }
-    else {
-        console.log('4. Cannot test solver: scrambled state failed');
-    }
+    // // Test 4: Solve from state
+    // if (scrambledState.success && scrambledState.state) {
+    //   console.log('4. Testing solve_from_state:');
+    //   const { cp, co, ep, eo } = scrambledState.state;
+    //   // Convert arrays to Uint8Array for WASM
+    //   const cpArray = new Uint8Array(cp);
+    //   const coArray = new Uint8Array(co);
+    //   const epArray = new Uint8Array(ep);
+    //   const eoArray = new Uint8Array(eo);
+    //   console.log('Solving state...');
+    //   const solutions = solve_from_state(cpArray, coArray, epArray, eoArray);
+    //   console.log('Solutions:', JSON.stringify(solutions, null, 2));
+    //   if (solutions.success && solutions.solutions) {
+    //     console.log('\n✅ All solutions found:');
+    //     solutions.solutions.forEach((solution: string, index: number) => {
+    //       console.log(`  Solution ${index + 1}: ${solution}`);
+    //     });
+    //   }
+    // } else {
+    //   console.log('4. Cannot test solver: scrambled state failed');
+    // }
     // Test 5: BLD Solver with Default Moveset
     if (scrambledState.success && scrambledState.state) {
         console.log('5. Testing BLD Solver with Default Moveset (solve_bld_with_default_moveset):');
