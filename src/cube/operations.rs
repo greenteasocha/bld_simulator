@@ -219,7 +219,7 @@ pub fn apply_notation_move(state: &State, mv: &NotationMove) -> State {
     if matches!(mv, NotationMove::Noop) {
         return state.clone();
     }
-    
+
     let cube = RubiksCube::new();
     let move_name = mv.to_string();
     cube.apply_move(state, &move_name).unwrap_or_else(|| {
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn test_rubiks_cube_scramble_a() {
         let cube = RubiksCube::new();
-        let scramble = "D R U R' D' R U' R' U2 M' U2 M M' U2 M U2 U R' D R U' R' D'";
+        let scramble = "D R U R' D' R U' R' U2 M' U2 M M' U2 M U2 R2 U R' D R U' R' D'";
         println!("state: {:?}", cube.scramble_to_state(scramble));
     }
 }
