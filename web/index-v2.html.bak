@@ -165,6 +165,18 @@
             background: #f5f5f5;
             border-left-color: #ccc;
             opacity: 0.5;
+            max-height: 100px;
+            transition: all 0.3s ease, max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+        }
+
+        .move-sequence-item.hidden {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            overflow: hidden;
+            transition: all 0.3s ease, max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
         }
 
         .move-sequence-item.active {
@@ -288,7 +300,7 @@
         import init, { 
             apply_scramble_to_state,
             solve_bld_with_default_moveset_v2
-        } from '/pkg/bld_simulator.js';
+        } from './bld_simulator.js';
 
         let wasmInitialized = false;
         let currentStep = 0;
@@ -332,6 +344,15 @@
                 return;
             }
 
+            // Hide the previous completed card (if exists)
+            if (currentStep > 0) {
+                const prevCard = document.querySelector('.move-sequence-item[data-index="' + (currentStep - 1) + '"]');
+                if (prevCard) {
+                    prevCard.classList.add('hidden');
+                }
+            }
+
+            // Mark current card as completed
             const currentCard = document.querySelector('.move-sequence-item[data-index="' + currentStep + '"]');
             if (currentCard) {
                 currentCard.classList.remove('active');
@@ -340,10 +361,12 @@
 
             currentStep++;
 
+            // Activate next card
             if (currentStep < totalSteps) {
                 const nextCard = document.querySelector('.move-sequence-item[data-index="' + currentStep + '"]');
                 if (nextCard) {
                     nextCard.classList.add('active');
+                    // Scroll to keep the active card in view
                     nextCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }
